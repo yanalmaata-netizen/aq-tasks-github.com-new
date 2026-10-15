@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AQ Задачи</title>
+<meta name="theme-color" content="#0162d3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AQ Задачи">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: синяя шапка AQ, под ней две страницы: Задачи и Сводка на день. Строка = дата, задача, ответственный. Цвет строки зависит от срока. */
+:root {
+  --blue: #0162d3;
+  --orange: #ff9a00;
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --fg: #070707;
+  --muted: #6e6e73;
+  --line: #e3e3e8;
+  --link: #0162d3;
+  --warn-bg: #fff4d1;
+  --warn-fg: #7a5200;
+  --late-bg: #ffe3e0;
+  --late-fg: #b3261e;
+  --font: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #070707; --surface: #161618; --fg: #f5f5f7; --muted: #98989d; --line: #2c2c2e; --link: #4c97f2;
+    --warn-bg: #3a2f0b; --warn-fg: #ffd66b; --late-bg: #3d1512; --late-fg: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #070707; --surface: #161618; --fg: #f5f5f7; --muted: #98989d; --line: #2c2c2e; --link: #4c97f2;
+  --warn-bg: #3a2f0b; --warn-fg: #ffd66b; --late-bg: #3d1512; --late-fg: #ff8a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 56px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+header {
+  background: var(--blue); color: #fff;
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding: 18px max(16px, env(safe-area-inset-left, 0px));
+}
+.head-in { max-width: 860px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo svg { width: 52px; height: auto; display: block; }
+.logo .aq { font-weight: 800; font-size: 32px; letter-spacing: -0.02em; line-height: 1; display: block; }
+.logo .ms { font-weight: 400; font-size: 16px; line-height: 1.1; display: block; }
+.sub { font-size: 13px; opacity: .92; }
+
+.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px; margin: 20px 0; width: fit-content; max-width: 100%; }
+.tabs button { font: inherit; font-weight: 500; border: 0; background: transparent; color: var(--muted); padding: 9px 20px; border-radius: 10px; cursor: pointer; min-height: 40px; }
+.tabs button[aria-selected="true"] { background: var(--blue); color: #fff; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+.add { display: grid; grid-template-columns: 150px minmax(0, 1fr) 170px auto; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; margin-bottom: 24px; }
+.add input { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; }
+.add .go { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; padding: 0 24px; min-height: 46px; cursor: pointer; }
+.add .go:disabled { opacity: .5; cursor: default; }
+
+.group { margin-bottom: 24px; }
+.group h2 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 6px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 150px 160px 80px 32px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.warn { background: var(--warn-bg); }
+.row.late { background: var(--late-bg); }
+.row input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--blue); margin: 0; cursor: pointer; }
+.row input[type=text], .row input[type=date] { font: inherit; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px; min-height: 42px; min-width: 0; width: 100%; }
+.row input[type=text]:hover, .row input[type=date]:hover { border-color: var(--line); }
+.row.done input[type=text] { text-decoration: line-through; color: var(--muted); }
+.tag { font-size: 12px; font-weight: 700; text-align: center; border-radius: 999px; padding: 3px 8px; }
+.row.warn .tag { color: var(--warn-fg); }
+.row.late .tag { color: var(--late-fg); }
+.row .x { font: inherit; border: 0; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; border-radius: 10px; min-height: 40px; }
+.row .x:hover { color: var(--fg); }
+.empty, .note { color: var(--muted); padding: 16px; }
+.note { padding: 0 6px 16px; font-size: 14px; }
+
+.today-head { margin: 0 0 4px; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0 0 20px; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 24px; }
+.count { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 14px 16px; }
+.count b { display: block; font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.count span { font-size: 13px; color: var(--muted); }
+.count.late b { color: var(--late-fg); }
+.count.warn b { color: var(--link); }
+.item { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 12px 16px; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.item.late { background: var(--late-bg); }
+.item .t { min-width: 0; overflow-wrap: anywhere; }
+.item .t small { display: block; color: var(--muted); font-size: 12px; }
+.chip { flex: none; font-size: 12px; font-weight: 500; background: var(--blue); color: #fff; border-radius: 999px; padding: 3px 10px; }
+[hidden] { display: none !important; }
+
+@media (max-width: 680px) {
+  .add { grid-template-columns: 1fr 1fr; }
+  .add #n-text { grid-column: 1 / -1; order: -1; }
+  .add .go { grid-column: 1 / -1; }
+  .row { grid-template-columns: 28px minmax(0, 1fr) 32px; }
+  .row .d { grid-column: 2; grid-row: 2; }
+  .row .r { grid-column: 2; grid-row: 3; }
+  .row .tag { grid-column: 2; grid-row: 4; justify-self: start; padding-inline: 12px; }
+  .row .x { grid-column: 3; grid-row: 1; }
+}
+</style>
+<style>
+.gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; }
+.gate form { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
+.gate h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.gate p { margin: 0; color: var(--muted); font-size: 14px; }
+.gate input { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 48px; width: 100%; }
+.gate button { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; min-height: 48px; cursor: pointer; }
+.gate .err { color: var(--late-fg); font-size: 14px; min-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <div class="logo" aria-label="AQ minisuites">
+      <svg viewBox="0 0 120 104" aria-hidden="true">
+        <circle cx="52" cy="68" r="22" fill="none" stroke="#fff" stroke-width="10"/>
+        <line x1="66" y1="80" x2="78" y2="92" stroke="#ff9a00" stroke-width="11" stroke-linecap="round"/>
+        <path d="M36 6 H70 L92 46 H14 Z" fill="#ff9a00" stroke="#ff9a00" stroke-width="6" stroke-linejoin="round"/>
+      </svg>
+      <div><span class="aq">AQ</span><span class="ms">minisuites</span></div>
+    </div>
+    <div class="sub">Задачи преоткрытия</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-tasks" aria-selected="true">Задачи</button>
+    <button role="tab" id="tab-sum" aria-selected="false">Сводка на день</button>
+  </div>
+
+  <section id="page-tasks">
+    <form class="add" id="add">
+      <input type="date" id="n-date" aria-label="Дата" required>
+      <input type="text" id="n-text" placeholder="Новая задача" aria-label="Задача" required autocomplete="off">
+      <input type="text" id="n-resp" list="people" placeholder="Ответственный" aria-label="Ответственный" required autocomplete="off">
+      <button class="go" id="n-go" type="submit">Добавить</button>
+    </form>
+    <datalist id="people"></datalist>
+    <p class="note" id="legend">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
+    <div id="list"></div>
+  </section>
+
+  <section id="page-sum" hidden>
+    <h1 class="today-head" id="sum-title"></h1>
+    <p class="lead">Сводка на день</p>
+    <div class="counts" id="counts"></div>
+    <div id="sum-body"></div>
+  </section>
+</div>
+
+
+<div class="gate" id="gate" hidden>
+  <form id="gate-form">
+    <h1>AQ Задачи</h1>
+    <p>Введите код доступа команды.</p>
+    <input type="password" id="gate-code" autocomplete="current-password" aria-label="Код доступа" required>
+    <div class="err" id="gate-err"></div>
+    <button type="submit">Войти</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  var tasks = [];
+  var ready = false;
+  var CODE = '';
+  try { CODE = localStorage.getItem('aq_code') || ''; } catch (e) {}
+
+  function api(method, path, body) {
+    return fetch(path, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', 'x-code': CODE },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      if (r.status === 401) { showGate(''); throw new Error('code'); }
+      if (!r.ok) throw new Error('http');
+      return r.json();
+    });
+  }
+
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function parse(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12); }
+  function dayDiff(s) { var a = parse(s), b = new Date(); b.setHours(12, 0, 0, 0); return Math.round((a - b) / 86400000); }
+  function state(t) { if (t.done) return 'done'; var d = dayDiff(t.date); if (d < 0) return 'late'; if (d <= 1) return 'warn'; return 'ok'; }
+  function tagText(t) {
+    var s = state(t), d = dayDiff(t.date);
+    if (s === 'late') return 'Просрочено ' + (-d) + ' дн.';
+    if (s === 'warn') return d === 0 ? 'Срок сегодня' : 'Срок завтра';
+    return '';
+  }
+  var fmtLong = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  var fmtShort = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+  function load() {
+    return api('GET', '/api/tasks').then(function (rows) { tasks = rows; ready = true; render(); }).catch(function () {});
+  }
+  function write(p) { return p.then(load).catch(function () {}); }
+
+  function rowFor(t) {
+    var s = state(t);
+    var r = el('div', 'row' + (s === 'done' ? ' done' : s === 'late' ? ' late' : s === 'warn' ? ' warn' : ''));
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.setAttribute('aria-label', 'Готово');
+    cb.onchange = function () { write(api('PATCH', '/api/tasks/' + t.id, { done: cb.checked })); };
+    var tx = el('input'); tx.type = 'text'; tx.value = t.text; tx.setAttribute('aria-label', 'Задача');
+    tx.onchange = function () { var v = tx.value.trim(); if (v && v !== t.text) write(api('PATCH', '/api/tasks/' + t.id, { text: v })); else tx.value = t.text; };
+    var dt = el('input', 'd'); dt.type = 'date'; dt.value = t.date; dt.setAttribute('aria-label', 'Дата');
+    dt.onchange = function () { if (dt.value && dt.value !== t.date) write(api('PATCH', '/api/tasks/' + t.id, { date: dt.value })); else dt.value = t.date; };
+    var rs = el('input', 'r'); rs.type = 'text'; rs.value = t.resp; rs.setAttribute('aria-label', 'Ответственный'); rs.setAttribute('list', 'people');
+    rs.onchange = function () { var v = rs.value.trim(); if (v && v !== t.resp) write(api('PATCH', '/api/tasks/' + t.id, { resp: v })); else rs.value = t.resp; };
+    var tag = el('span', 'tag', tagText(t));
+    var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Удалить');
+    x.onclick = function () { write(api('DELETE', '/api/tasks/' + t.id)); };
+    [cb, tx, dt, rs, tag, x].forEach(function (n) { r.appendChild(n); });
+    return r;
+  }
+  function group(title, items) {
+    var g = el('div', 'group'); g.appendChild(el('h2', null, title));
+    var c = el('div', 'card'); items.forEach(function (t) { c.appendChild(rowFor(t)); });
+    g.appendChild(c); return g;
+  }
+  function renderList() {
+    var box = document.getElementById('list'); box.textContent = '';
+    if (!ready) { box.appendChild(el('p', 'empty', 'Загружаю задачи.')); return; }
+    if (!tasks.length) { box.appendChild(el('p', 'empty', 'Задач пока нет. Добавьте первую выше.')); return; }
+    var open = tasks.filter(function (t) { return !t.done; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var done = tasks.filter(function (t) { return t.done; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var late = open.filter(function (t) { return state(t) === 'late'; });
+    if (late.length) box.appendChild(group('Просрочено', late));
+    var rest = open.filter(function (t) { return state(t) !== 'late'; });
+    var seen = {}, order = [];
+    rest.forEach(function (t) { if (!seen[t.date]) { seen[t.date] = []; order.push(t.date); } seen[t.date].push(t); });
+    order.forEach(function (k) {
+      var d = dayDiff(k), label = cap(fmtShort.format(parse(k)));
+      if (d === 0) label = 'Сегодня · ' + fmtLong.format(parse(k));
+      else if (d === 1) label = 'Завтра · ' + fmtLong.format(parse(k));
+      box.appendChild(group(label, seen[k]));
+    });
+    if (done.length) box.appendChild(group('Готово', done));
+  }
+  function sumGroup(title, items, late) {
+    var g = el('div', 'group'); g.appendChild(el('h2', null, title + ' · ' + items.length));
+    var c = el('div', 'card');
+    if (!items.length) c.appendChild(el('div', 'empty', 'Нет задач'));
+    items.forEach(function (t) {
+      var i = el('div', 'item' + (late ? ' late' : ''));
+      var tt = el('div', 't', t.text);
+      if (late) tt.appendChild(el('small', null, 'Срок был ' + cap(fmtShort.format(parse(t.date)))));
+      i.appendChild(tt); i.appendChild(el('span', 'chip', t.resp)); c.appendChild(i);
+    });
+    g.appendChild(c); return g;
+  }
+  function renderSummary() {
+    var open = tasks.filter(function (t) { return !t.done; });
+    var late = open.filter(function (t) { return dayDiff(t.date) < 0; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var now = open.filter(function (t) { return dayDiff(t.date) === 0; });
+    var next = open.filter(function (t) { return dayDiff(t.date) === 1; });
+    document.getElementById('sum-title').textContent = cap(fmtLong.format(new Date()));
+    var cnt = document.getElementById('counts'); cnt.textContent = '';
+    [['late', late.length, 'Просрочено'], ['', now.length, 'На сегодня'], ['warn', next.length, 'На завтра']].forEach(function (c) {
+      var d = el('div', 'count ' + c[0]); d.appendChild(el('b', null, String(c[1]))); d.appendChild(el('span', null, c[2])); cnt.appendChild(d);
+    });
+    var body = document.getElementById('sum-body'); body.textContent = '';
+    if (late.length) body.appendChild(sumGroup('Просрочено', late, true));
+    body.appendChild(sumGroup('Сегодня', now, false));
+    body.appendChild(sumGroup('Завтра', next, false));
+  }
+  function renderPeople() {
+    var names = { 'Мурагер': 1, 'Ян': 1 };
+    tasks.forEach(function (t) { if (t.resp) names[t.resp] = 1; });
+    var dl = document.getElementById('people'); dl.textContent = '';
+    Object.keys(names).forEach(function (n) { var o = el('option'); o.value = n; dl.appendChild(o); });
+  }
+  function render() {
+    // не перерисовываем список, пока человек печатает в строке
+    var a = document.activeElement;
+    var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date');
+    if (!typing) renderList();
+    renderSummary(); renderPeople();
+  }
+
+  document.getElementById('n-date').value = iso(new Date());
+  document.getElementById('add').onsubmit = function (e) {
+    e.preventDefault();
+    var d = document.getElementById('n-date').value;
+    var tx = document.getElementById('n-text'), rs = document.getElementById('n-resp');
+    if (!d || !tx.value.trim() || !rs.value.trim()) return;
+    var data = { date: d, text: tx.value.trim(), resp: rs.value.trim() };
+    tx.value = '';
+    write(api('POST', '/api/tasks', data));
+  };
+
+  function show(which) {
+    var a = which === 'tasks';
+    document.getElementById('page-tasks').hidden = !a;
+    document.getElementById('page-sum').hidden = a;
+    document.getElementById('tab-tasks').setAttribute('aria-selected', a);
+    document.getElementById('tab-sum').setAttribute('aria-selected', !a);
+  }
+  document.getElementById('tab-tasks').onclick = function () { show('tasks'); };
+  document.getElementById('tab-sum').onclick = function () { show('sum'); };
+
+  var timer = null;
+  function showGate(msg) {
+    document.getElementById('gate').hidden = false;
+    document.getElementById('gate-err').textContent = msg || '';
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function start() {
+    document.getElementById('gate').hidden = true;
+    render();
+    load();
+    if (!timer) timer = setInterval(load, 15000);
+  }
+  document.getElementById('gate-form').onsubmit = function (e) {
+    e.preventDefault();
+    CODE = document.getElementById('gate-code').value.trim();
+    fetch('/api/check', { headers: { 'x-code': CODE } }).then(function (r) {
+      if (r.ok) { try { localStorage.setItem('aq_code', CODE); } catch (e) {} start(); }
+      else document.getElementById('gate-err').textContent = 'Неверный код';
+    });
+  };
+
+  fetch('/api/check', { headers: { 'x-code': CODE } }).then(function (r) {
+    if (r.ok) start(); else showGate('');
+  }).catch(function () { showGate('Нет связи с сервером'); });
+})();
+</script>
+</body>
+</html>
