@@ -119,13 +119,53 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 }
 </style>
 <style>
-.gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; }
-.gate form { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
+.gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; overflow: auto; }
+.gate form { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 28px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
 .gate h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
 .gate p { margin: 0; color: var(--muted); font-size: 14px; }
-.gate input { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 48px; width: 100%; }
-.gate button { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; min-height: 48px; cursor: pointer; }
-.gate .err { color: var(--late-fg); font-size: 14px; min-height: 18px; }
+.gate input, .team-add input, .bulk textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 48px; width: 100%; min-width: 0; }
+.gate button, .go { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; min-height: 48px; padding: 0 22px; cursor: pointer; }
+.err { color: var(--late-fg); font-size: 14px; min-height: 18px; }
+.add select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; }
+.row select.r { font: inherit; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px; min-height: 42px; min-width: 0; width: 100%; }
+.row select.r:hover { border-color: var(--line); }
+.me { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.16); color: #fff; border: 0; border-radius: 999px; padding: 4px 14px 4px 4px; font: inherit; font-weight: 500; cursor: pointer; min-height: 44px; }
+.av { width: 36px; height: 36px; border-radius: 50%; background: var(--orange); color: #070707; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; overflow: hidden; flex: none; }
+.av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.av.sm { width: 22px; height: 22px; font-size: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.chip.admin { background: var(--orange); color: #070707; }
+.tabs { flex-wrap: wrap; }
+.team-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+.chk { grid-column: 1 / -1; font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.chk input { width: 18px; height: 18px; min-height: 0; accent-color: var(--blue); }
+.bulk { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px 16px; margin-bottom: 16px; }
+.bulk summary { cursor: pointer; font-weight: 500; min-height: 32px; }
+.bulk textarea { display: block; margin: 8px 0; resize: vertical; }
+.invites { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+.invites .line { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.invites .line span { min-width: 0; overflow-wrap: anywhere; }
+.ghost { font: inherit; font-weight: 500; background: transparent; color: var(--link); border: 1px solid var(--line); border-radius: 12px; min-height: 44px; padding: 0 16px; cursor: pointer; }
+.ghost.danger { color: var(--late-fg); }
+.urow { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+.urow:first-child { border-top: 0; }
+.urow .av { width: 44px; height: 44px; font-size: 16px; }
+.urow .nm { font-weight: 500; overflow-wrap: anywhere; }
+.urow .ph { color: var(--muted); font-size: 13px; }
+.urow .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.urow .acts button { font: inherit; font-size: 13px; background: transparent; border: 1px solid var(--line); border-radius: 10px; color: var(--link); min-height: 36px; padding: 0 10px; cursor: pointer; }
+.urow .acts button.danger { color: var(--late-fg); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.sheet { background: var(--surface); border-radius: 24px; padding: 24px; width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+.sheet h2 { margin: 0; font-size: 20px; }
+.sheet .note { padding: 0; margin: 0; }
+.big-av { width: 120px; height: 120px; border-radius: 50%; background: var(--orange); color: #070707; font-size: 44px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto; }
+.big-av img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 680px) {
+  .team-add { grid-template-columns: 1fr; }
+  .urow { grid-template-columns: 44px minmax(0, 1fr); }
+  .urow .acts { grid-column: 1 / -1; justify-content: flex-start; }
+}
 </style>
 </head>
 <body>
@@ -139,25 +179,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       </svg>
       <div><span class="aq">AQ</span><span class="ms">minisuites</span></div>
     </div>
-    <div class="sub">Задачи преоткрытия</div>
+    <button class="me" id="me" type="button" hidden aria-label="Профиль"><span id="me-av"></span><span id="me-name"></span></button>
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap" id="app" hidden>
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-tasks" aria-selected="true">Задачи</button>
     <button role="tab" id="tab-sum" aria-selected="false">Сводка на день</button>
+    <button role="tab" id="tab-team" aria-selected="false">Команда</button>
   </div>
 
   <section id="page-tasks">
     <form class="add" id="add">
       <input type="date" id="n-date" aria-label="Дата" required>
       <input type="text" id="n-text" placeholder="Новая задача" aria-label="Задача" required autocomplete="off">
-      <input type="text" id="n-resp" list="people" placeholder="Ответственный" aria-label="Ответственный" required autocomplete="off">
+      <select id="n-resp" aria-label="Ответственный" required></select>
       <button class="go" id="n-go" type="submit">Добавить</button>
     </form>
-    <datalist id="people"></datalist>
-    <p class="note" id="legend">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
+    <p class="note">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
     <div id="list"></div>
   </section>
 
@@ -167,38 +207,84 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <div class="counts" id="counts"></div>
     <div id="sum-body"></div>
   </section>
+
+  <section id="page-team" hidden>
+    <div id="admin-box" hidden>
+      <form class="add team-add" id="user-add">
+        <input type="text" id="u-name" placeholder="Имя" aria-label="Имя" required autocomplete="off">
+        <input type="tel" id="u-phone" placeholder="Телефон" aria-label="Телефон" required autocomplete="off">
+        <input type="text" id="u-code" placeholder="Код (пусто – выдам сам)" aria-label="Код" autocomplete="off" inputmode="numeric">
+        <button class="go" type="submit">Добавить</button>
+        <label class="chk"><input type="checkbox" id="u-admin"> Администратор</label>
+      </form>
+      <details class="bulk">
+        <summary>Добавить списком</summary>
+        <p class="note">Одна строка – один человек: имя, телефон. Коды выдам сам.</p>
+        <textarea id="bulk-text" rows="5" aria-label="Список" placeholder="Айгуль; +7 701 000 00 00&#10;Талгат; 8 702 000 00 00"></textarea>
+        <button class="go" id="bulk-go" type="button">Добавить всех</button>
+      </details>
+      <div id="invites" class="invites" hidden></div>
+    </div>
+    <div id="team-list"></div>
+  </section>
 </div>
 
-
-<div class="gate" id="gate" hidden>
-  <form id="gate-form">
+<div class="gate" id="auth" hidden>
+  <form id="setup-form" hidden>
+    <h1>Первый запуск</h1>
+    <p>Создайте администратора. Остальных сотрудников он добавит потом.</p>
+    <input type="text" id="s-name" placeholder="Имя" aria-label="Имя" required autocomplete="name">
+    <input type="tel" id="s-phone" placeholder="Телефон" aria-label="Телефон" required autocomplete="tel">
+    <input type="password" id="s-code" placeholder="Код, от 4 цифр" aria-label="Код" required autocomplete="new-password" inputmode="numeric">
+    <div class="err" id="s-err"></div>
+    <button type="submit">Создать и войти</button>
+  </form>
+  <form id="login-form" hidden>
     <h1>AQ Задачи</h1>
-    <p>Введите код доступа команды.</p>
-    <input type="password" id="gate-code" autocomplete="current-password" aria-label="Код доступа" required>
-    <div class="err" id="gate-err"></div>
+    <p>Войдите по телефону и коду.</p>
+    <input type="tel" id="l-phone" placeholder="Телефон" aria-label="Телефон" required autocomplete="username">
+    <input type="password" id="l-code" placeholder="Код" aria-label="Код" required autocomplete="current-password" inputmode="numeric">
+    <div class="err" id="l-err"></div>
     <button type="submit">Войти</button>
   </form>
 </div>
 
+<div class="modal" id="profile" hidden>
+  <div class="sheet" role="dialog" aria-label="Профиль">
+    <div class="big-av" id="p-av"></div>
+    <h2 id="p-name"></h2>
+    <p class="note" id="p-role"></p>
+    <input type="file" id="p-file" accept="image/*" hidden>
+    <button type="button" class="go" id="p-upload">Загрузить фото</button>
+    <button type="button" class="ghost" id="p-remove">Убрать фото</button>
+    <button type="button" class="ghost" id="p-logout">Выйти</button>
+    <button type="button" class="ghost" id="p-close">Закрыть</button>
+    <div class="err" id="p-err"></div>
+  </div>
+</div>
+
 <script>
 (function () {
-  var tasks = [];
-  var ready = false;
-  var CODE = '';
-  try { CODE = localStorage.getItem('aq_code') || ''; } catch (e) {}
+  var TOKEN = '', ME = null, users = [], tasks = [], ready = false, timer = null;
+  try { TOKEN = localStorage.getItem('aq_token') || ''; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
   function api(method, path, body) {
     return fetch(path, {
       method: method,
-      headers: { 'Content-Type': 'application/json', 'x-code': CODE },
+      headers: { 'Content-Type': 'application/json', 'x-token': TOKEN },
       body: body ? JSON.stringify(body) : undefined
     }).then(function (r) {
-      if (r.status === 401) { showGate(''); throw new Error('code'); }
-      if (!r.ok) throw new Error('http');
-      return r.json();
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.status === 401 && path !== '/api/login') { showAuth(); throw new Error('auth'); }
+        if (!r.ok) { var er = new Error(j.error || 'http'); er.status = r.status; er.code = j.error; throw er; }
+        return j;
+      });
     });
   }
 
+  /* ---------- даты ---------- */
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function parse(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12); }
   function dayDiff(s) { var a = parse(s), b = new Date(); b.setHours(12, 0, 0, 0); return Math.round((a - b) / 86400000); }
@@ -212,13 +298,85 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   var fmtLong = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
   var fmtShort = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 
-  function load() {
-    return api('GET', '/api/tasks').then(function (rows) { tasks = rows; ready = true; render(); }).catch(function () {});
+  /* ---------- аватары ---------- */
+  var photoCache = {};
+  function initials(name) { var p = String(name || '?').trim().split(/\s+/); return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); }
+  function userById(id) { for (var i = 0; i < users.length; i++) if (users[i].id === id) return users[i]; return null; }
+  function avatar(u, cls) {
+    var a = el('span', 'av' + (cls ? ' ' + cls : ''), initials(u ? u.name : '?'));
+    if (u && u.photoV) {
+      var key = u.id + '_' + u.photoV;
+      var put = function (url) { a.textContent = ''; var im = el('img'); im.src = url; im.alt = ''; a.appendChild(im); };
+      if (photoCache[key]) put(photoCache[key]);
+      else {
+        fetch('/api/users/' + u.id + '/photo', { headers: { 'x-token': TOKEN } })
+          .then(function (r) { return r.ok ? r.blob() : null; })
+          .then(function (b) { if (b) { photoCache[key] = URL.createObjectURL(b); put(photoCache[key]); } })
+          .catch(function () {});
+      }
+    }
+    return a;
   }
-  function write(p) { return p.then(load).catch(function () {}); }
 
+  /* ---------- вход ---------- */
+  function showAuth() {
+    TOKEN = ''; try { localStorage.removeItem('aq_token'); } catch (e) {}
+    ME = null;
+    if (timer) { clearInterval(timer); timer = null; }
+    $('app').hidden = true; $('me').hidden = true; $('profile').hidden = true;
+    $('auth').hidden = false;
+    fetch('/api/state').then(function (r) { return r.json(); }).then(function (s) {
+      $('setup-form').hidden = !s.needsSetup;
+      $('login-form').hidden = !!s.needsSetup;
+    }).catch(function () { $('login-form').hidden = false; $('l-err').textContent = 'Нет связи с сервером'; });
+  }
+  function saveToken(t) { TOKEN = t; try { localStorage.setItem('aq_token', t); } catch (e) {} boot(); }
+  $('setup-form').onsubmit = function (e) {
+    e.preventDefault();
+    api('POST', '/api/setup', { name: $('s-name').value, phone: $('s-phone').value, code: $('s-code').value })
+      .then(function (r) { saveToken(r.token); })
+      .catch(function () { $('s-err').textContent = 'Проверьте имя, телефон и код (от 4 цифр).'; });
+  };
+  $('login-form').onsubmit = function (e) {
+    e.preventDefault();
+    $('l-err').textContent = '';
+    api('POST', '/api/login', { phone: $('l-phone').value, code: $('l-code').value })
+      .then(function (r) { saveToken(r.token); })
+      .catch(function (er) { $('l-err').textContent = er.status === 429 ? 'Слишком много попыток. Подождите 10 минут.' : 'Неверный телефон или код.'; });
+  };
+
+  function boot() {
+    if (!TOKEN) return showAuth();
+    api('GET', '/api/me').then(function (me) {
+      ME = me;
+      $('auth').hidden = true; $('app').hidden = false; $('me').hidden = false;
+      $('n-date').value = iso(new Date());
+      $('admin-box').hidden = ME.role !== 'admin';
+      return loadAll();
+    }).then(function () {
+      if (!timer) timer = setInterval(loadAll, 15000);
+    }).catch(function () {});
+  }
+
+  function loadAll() {
+    return Promise.all([api('GET', '/api/users'), api('GET', '/api/tasks')]).then(function (r) {
+      users = r[0]; tasks = r[1]; ready = true;
+      var mine = userById(ME.id); if (mine) { ME.photoV = mine.photoV; ME.name = mine.name; ME.role = mine.role; }
+      $('admin-box').hidden = ME.role !== 'admin';
+      render();
+    }).catch(function () {});
+  }
+  function write(p) { return p.then(loadAll).catch(function () {}); }
+
+  /* ---------- задачи ---------- */
+  function respSelect(t) {
+    var s = el('select', 'r'); s.setAttribute('aria-label', 'Ответственный');
+    if (!t.userId) { var o0 = el('option', null, t.resp || 'Не назначен'); o0.value = ''; s.appendChild(o0); }
+    users.forEach(function (u) { var o = el('option', null, u.name); o.value = u.id; if (u.id === t.userId) o.selected = true; s.appendChild(o); });
+    s.onchange = function () { if (s.value) write(api('PATCH', '/api/tasks/' + t.id, { userId: Number(s.value) })); };
+    return s;
+  }
   function rowFor(t) {
     var s = state(t);
     var r = el('div', 'row' + (s === 'done' ? ' done' : s === 'late' ? ' late' : s === 'warn' ? ' warn' : ''));
@@ -228,8 +386,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     tx.onchange = function () { var v = tx.value.trim(); if (v && v !== t.text) write(api('PATCH', '/api/tasks/' + t.id, { text: v })); else tx.value = t.text; };
     var dt = el('input', 'd'); dt.type = 'date'; dt.value = t.date; dt.setAttribute('aria-label', 'Дата');
     dt.onchange = function () { if (dt.value && dt.value !== t.date) write(api('PATCH', '/api/tasks/' + t.id, { date: dt.value })); else dt.value = t.date; };
-    var rs = el('input', 'r'); rs.type = 'text'; rs.value = t.resp; rs.setAttribute('aria-label', 'Ответственный'); rs.setAttribute('list', 'people');
-    rs.onchange = function () { var v = rs.value.trim(); if (v && v !== t.resp) write(api('PATCH', '/api/tasks/' + t.id, { resp: v })); else rs.value = t.resp; };
+    var rs = respSelect(t);
     var tag = el('span', 'tag', tagText(t));
     var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Удалить');
     x.onclick = function () { write(api('DELETE', '/api/tasks/' + t.id)); };
@@ -242,7 +399,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     g.appendChild(c); return g;
   }
   function renderList() {
-    var box = document.getElementById('list'); box.textContent = '';
+    var box = $('list'); box.textContent = '';
     if (!ready) { box.appendChild(el('p', 'empty', 'Загружаю задачи.')); return; }
     if (!tasks.length) { box.appendChild(el('p', 'empty', 'Задач пока нет. Добавьте первую выше.')); return; }
     var open = tasks.filter(function (t) { return !t.done; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
@@ -260,6 +417,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     });
     if (done.length) box.appendChild(group('Готово', done));
   }
+  function chip(t) {
+    var c = el('span', 'chip');
+    var u = t.userId ? userById(t.userId) : null;
+    if (u) c.appendChild(avatar(u, 'sm'));
+    c.appendChild(document.createTextNode(t.resp));
+    return c;
+  }
   function sumGroup(title, items, late) {
     var g = el('div', 'group'); g.appendChild(el('h2', null, title + ' · ' + items.length));
     var c = el('div', 'card');
@@ -268,7 +432,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       var i = el('div', 'item' + (late ? ' late' : ''));
       var tt = el('div', 't', t.text);
       if (late) tt.appendChild(el('small', null, 'Срок был ' + cap(fmtShort.format(parse(t.date)))));
-      i.appendChild(tt); i.appendChild(el('span', 'chip', t.resp)); c.appendChild(i);
+      i.appendChild(tt); i.appendChild(chip(t)); c.appendChild(i);
     });
     g.appendChild(c); return g;
   }
@@ -277,75 +441,185 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var late = open.filter(function (t) { return dayDiff(t.date) < 0; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var now = open.filter(function (t) { return dayDiff(t.date) === 0; });
     var next = open.filter(function (t) { return dayDiff(t.date) === 1; });
-    document.getElementById('sum-title').textContent = cap(fmtLong.format(new Date()));
-    var cnt = document.getElementById('counts'); cnt.textContent = '';
+    $('sum-title').textContent = cap(fmtLong.format(new Date()));
+    var cnt = $('counts'); cnt.textContent = '';
     [['late', late.length, 'Просрочено'], ['', now.length, 'На сегодня'], ['warn', next.length, 'На завтра']].forEach(function (c) {
       var d = el('div', 'count ' + c[0]); d.appendChild(el('b', null, String(c[1]))); d.appendChild(el('span', null, c[2])); cnt.appendChild(d);
     });
-    var body = document.getElementById('sum-body'); body.textContent = '';
+    var body = $('sum-body'); body.textContent = '';
     if (late.length) body.appendChild(sumGroup('Просрочено', late, true));
     body.appendChild(sumGroup('Сегодня', now, false));
     body.appendChild(sumGroup('Завтра', next, false));
   }
-  function renderPeople() {
-    var names = { 'Мурагер': 1, 'Ян': 1 };
-    tasks.forEach(function (t) { if (t.resp) names[t.resp] = 1; });
-    var dl = document.getElementById('people'); dl.textContent = '';
-    Object.keys(names).forEach(function (n) { var o = el('option'); o.value = n; dl.appendChild(o); });
+
+  /* ---------- команда ---------- */
+  var lastInvites = [];
+  function inviteText(phone, code) {
+    return 'Задачи AQ miniSUITES: ' + location.origin + '\nЛогин: +' + phone + '\nКод: ' + code;
   }
-  function render() {
-    // не перерисовываем список, пока человек печатает в строке
-    var a = document.activeElement;
-    var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date');
-    if (!typing) renderList();
-    renderSummary(); renderPeople();
+  function copy(text, btn) {
+    var done = function () { var o = btn.textContent; btn.textContent = 'Скопировано'; setTimeout(function () { btn.textContent = o; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+    else { fallbackCopy(text); done(); }
+  }
+  function fallbackCopy(text) {
+    var ta = el('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta);
+  }
+  function showInvites(items) {
+    var box = $('invites'); box.textContent = '';
+    if (!items.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.appendChild(el('strong', null, 'Приглашения. Коды видны только сейчас, потом их можно только сбросить.'));
+    var okAll = [];
+    items.forEach(function (it) {
+      var line = el('div', 'line');
+      if (it.status === 'ok') {
+        line.appendChild(el('span', null, it.name + ' · +' + it.phone + ' · код ' + it.code));
+        var b = el('button', 'ghost', 'Копировать'); b.type = 'button';
+        b.onclick = function () { copy(inviteText(it.phone, it.code), b); };
+        line.appendChild(b);
+        okAll.push(it);
+      } else line.appendChild(el('span', null, (it.name || it.line) + ' – ' + it.status));
+      box.appendChild(line);
+    });
+    if (okAll.length > 1) {
+      var all = el('button', 'ghost', 'Копировать все приглашения'); all.type = 'button';
+      all.onclick = function () { copy(okAll.map(function (it) { return it.name + '\n' + inviteText(it.phone, it.code); }).join('\n\n'), all); };
+      box.appendChild(all);
+    }
+  }
+  function renderTeam() {
+    var box = $('team-list'); box.textContent = '';
+    var admin = ME && ME.role === 'admin';
+    var g = el('div', 'group'); g.appendChild(el('h2', null, 'Команда · ' + users.length));
+    var c = el('div', 'card');
+    users.forEach(function (u) {
+      var r = el('div', 'urow');
+      r.appendChild(avatar(u));
+      var mid = el('div');
+      mid.appendChild(el('div', 'nm', u.name));
+      if (admin && u.phone) mid.appendChild(el('div', 'ph', '+' + u.phone));
+      r.appendChild(mid);
+      var acts = el('div', 'acts');
+      if (u.role === 'admin') acts.appendChild(el('span', 'chip admin', 'Админ'));
+      if (admin) {
+        var rc = el('button', null, 'Новый код'); rc.type = 'button';
+        rc.onclick = function () {
+          api('PATCH', '/api/users/' + u.id, { resetCode: true }).then(function (r2) {
+            showInvites([{ name: u.name, phone: u.phone, code: r2.code, status: 'ok' }]);
+            $('invites').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }).catch(function () {});
+        };
+        acts.appendChild(rc);
+        if (u.id !== ME.id) {
+          var rl = el('button', null, u.role === 'admin' ? 'Снять админа' : 'Сделать админом'); rl.type = 'button';
+          rl.onclick = function () { write(api('PATCH', '/api/users/' + u.id, { role: u.role === 'admin' ? 'staff' : 'admin' })); };
+          acts.appendChild(rl);
+          var dl = el('button', 'danger', 'Убрать'); dl.type = 'button';
+          dl.onclick = function () {
+            if (dl.dataset.sure !== '1') { dl.dataset.sure = '1'; dl.textContent = 'Точно убрать?'; setTimeout(function () { dl.dataset.sure = ''; dl.textContent = 'Убрать'; }, 4000); return; }
+            write(api('DELETE', '/api/users/' + u.id));
+          };
+          acts.appendChild(dl);
+        }
+      }
+      r.appendChild(acts);
+      c.appendChild(r);
+    });
+    g.appendChild(c); box.appendChild(g);
   }
 
-  document.getElementById('n-date').value = iso(new Date());
-  document.getElementById('add').onsubmit = function (e) {
+  $('user-add').onsubmit = function (e) {
     e.preventDefault();
-    var d = document.getElementById('n-date').value;
-    var tx = document.getElementById('n-text'), rs = document.getElementById('n-resp');
-    if (!d || !tx.value.trim() || !rs.value.trim()) return;
-    var data = { date: d, text: tx.value.trim(), resp: rs.value.trim() };
+    api('POST', '/api/users', { name: $('u-name').value, phone: $('u-phone').value, code: $('u-code').value, role: $('u-admin').checked ? 'admin' : 'staff' })
+      .then(function (r) {
+        showInvites([{ name: $('u-name').value.trim(), phone: $('u-phone').value.replace(/\D/g, '').replace(/^8(\d{10})$/, '7$1').replace(/^(\d{10})$/, '7$1'), code: r.code, status: 'ok' }]);
+        $('u-name').value = ''; $('u-phone').value = ''; $('u-code').value = ''; $('u-admin').checked = false;
+        return loadAll();
+      }).catch(function (er) { showInvites([{ line: $('u-name').value, status: er.status === 409 ? 'такой телефон уже есть' : 'проверьте имя, телефон и код' }]); });
+  };
+  $('bulk-go').onclick = function () {
+    var v = $('bulk-text').value;
+    if (!v.trim()) return;
+    api('POST', '/api/users/bulk', { lines: v }).then(function (r) { showInvites(r); $('bulk-text').value = ''; return loadAll(); }).catch(function () {});
+  };
+
+  /* ---------- профиль ---------- */
+  function renderMe() {
+    if (!ME) return;
+    var me = $('me-av'); me.textContent = ''; me.appendChild(avatar(userById(ME.id) || ME));
+    $('me-name').textContent = ME.name.split(' ')[0];
+  }
+  function renderProfile() {
+    var a = $('p-av'); a.textContent = '';
+    var av = avatar(userById(ME.id) || ME); av.className = ''; av.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center';
+    a.appendChild(av);
+    $('p-name').textContent = ME.name;
+    $('p-role').textContent = ME.role === 'admin' ? 'Администратор' : 'Сотрудник';
+  }
+  $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; };
+  $('p-close').onclick = function () { $('profile').hidden = true; };
+  $('profile').onclick = function (e) { if (e.target === $('profile')) $('profile').hidden = true; };
+  $('p-logout').onclick = function () { api('POST', '/api/logout').catch(function () {}).then(showAuth); };
+  $('p-upload').onclick = function () { $('p-file').click(); };
+  $('p-remove').onclick = function () { api('DELETE', '/api/users/' + ME.id + '/photo').then(loadAll).then(renderProfile).catch(function () {}); };
+  $('p-file').onchange = function () {
+    var f = $('p-file').files[0]; $('p-file').value = '';
+    if (!f) return;
+    var url = URL.createObjectURL(f), img = new Image();
+    img.onload = function () {
+      var S = 256, c = document.createElement('canvas'); c.width = S; c.height = S;
+      var m = Math.min(img.width, img.height), sx = (img.width - m) / 2, sy = (img.height - m) / 2;
+      c.getContext('2d').drawImage(img, sx, sy, m, m, 0, 0, S, S);
+      URL.revokeObjectURL(url);
+      c.toBlob(function (blob) {
+        var rd = new FileReader();
+        rd.onload = function () {
+          var b64 = String(rd.result).split(',')[1];
+          api('PUT', '/api/users/' + ME.id + '/photo', { data: b64 }).then(loadAll).then(renderProfile).catch(function () { $('p-err').textContent = 'Не удалось загрузить фото.'; });
+        };
+        rd.readAsDataURL(blob);
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function () { $('p-err').textContent = 'Не удалось прочитать файл.'; };
+    img.src = url;
+  };
+
+  /* ---------- форма задачи, вкладки ---------- */
+  function renderAddSelect() {
+    var s = $('n-resp'), cur = s.value; s.textContent = '';
+    users.forEach(function (u) { var o = el('option', null, u.name); o.value = u.id; s.appendChild(o); });
+    s.value = cur || (ME ? String(ME.id) : '');
+  }
+  $('add').onsubmit = function (e) {
+    e.preventDefault();
+    var d = $('n-date').value, tx = $('n-text'), uid = Number($('n-resp').value);
+    if (!d || !tx.value.trim() || !uid) return;
+    var data = { date: d, text: tx.value.trim(), userId: uid };
     tx.value = '';
     write(api('POST', '/api/tasks', data));
   };
-
   function show(which) {
-    var a = which === 'tasks';
-    document.getElementById('page-tasks').hidden = !a;
-    document.getElementById('page-sum').hidden = a;
-    document.getElementById('tab-tasks').setAttribute('aria-selected', a);
-    document.getElementById('tab-sum').setAttribute('aria-selected', !a);
-  }
-  document.getElementById('tab-tasks').onclick = function () { show('tasks'); };
-  document.getElementById('tab-sum').onclick = function () { show('sum'); };
-
-  var timer = null;
-  function showGate(msg) {
-    document.getElementById('gate').hidden = false;
-    document.getElementById('gate-err').textContent = msg || '';
-    if (timer) { clearInterval(timer); timer = null; }
-  }
-  function start() {
-    document.getElementById('gate').hidden = true;
-    render();
-    load();
-    if (!timer) timer = setInterval(load, 15000);
-  }
-  document.getElementById('gate-form').onsubmit = function (e) {
-    e.preventDefault();
-    CODE = document.getElementById('gate-code').value.trim();
-    fetch('/api/check', { headers: { 'x-code': CODE } }).then(function (r) {
-      if (r.ok) { try { localStorage.setItem('aq_code', CODE); } catch (e) {} start(); }
-      else document.getElementById('gate-err').textContent = 'Неверный код';
+    ['tasks', 'sum', 'team'].forEach(function (k) {
+      $('page-' + k).hidden = k !== which;
+      $('tab-' + k).setAttribute('aria-selected', k === which);
     });
-  };
+  }
+  $('tab-tasks').onclick = function () { show('tasks'); };
+  $('tab-sum').onclick = function () { show('sum'); };
+  $('tab-team').onclick = function () { show('team'); };
 
-  fetch('/api/check', { headers: { 'x-code': CODE } }).then(function (r) {
-    if (r.ok) start(); else showGate('');
-  }).catch(function () { showGate('Нет связи с сервером'); });
+  function render() {
+    var a = document.activeElement;
+    var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date' || a.tagName === 'SELECT');
+    if (!typing) renderList();
+    renderSummary(); renderAddSelect(); renderMe();
+    var ta = a && a.closest && a.closest('#user-add');
+    if (!ta) renderTeam();
+  }
+
+  boot();
 })();
 </script>
 </body>
