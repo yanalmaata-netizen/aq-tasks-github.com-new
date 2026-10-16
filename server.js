@@ -332,7 +332,7 @@ async function api(req, res, url) {
         if (!t.rows[0]) return send(res, 404, { error: 'not_found' });
         const ids = (Array.isArray(b.mentions) ? b.mentions : []).map(Number).filter(n => Number.isInteger(n) && n > 0 && n !== me.id).slice(0, 20);
         const r = await pool.query('INSERT INTO comments(task_id, user_id, author, text) VALUES($1,$2,$3,$4) RETURNING id', [tid, me.id, me.name, tx]);
-        if (ids.length) tg.notifyMention(ids, me.name, t.rows[0].text, t.rows[0].project, tx).catch(e => console.error('mention', e.message));
+        if (ids.length) tg.notifyMention(ids, me.name, t.rows[0].text, t.rows[0].project, tx, tid).catch(e => console.error('mention', e.message));
         return send(res, 200, { id: r.rows[0].id });
       }
       return send(res, 405, { error: 'method' });
@@ -365,7 +365,7 @@ async function api(req, res, url) {
       const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id, project_id, details) VALUES($1,$2,$3,$4,$5,$6) RETURNING id', [b.date, clean(b.text), nm, uid, pid, cleanDetails(b.details)]);
       if (uid !== me.id) {
         const pn = await pool.query('SELECT name FROM projects WHERE id = $1', [pid]);
-        push.notifyAssigned(uid, me.name, clean(b.text), b.date, pn.rows[0] && pn.rows[0].name).catch(e => console.error('push', e.message));
+        push.notifyAssigned(uid, me.name, clean(b.text), b.date, pn.rows[0] && pn.rows[0].name, r.rows[0].id).catch(e => console.error('push', e.message));
       }
       return send(res, 200, { id: r.rows[0].id });
     }
@@ -394,7 +394,7 @@ async function api(req, res, url) {
       await pool.query('UPDATE tasks SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals);
       if (b.userId !== undefined && Number(b.userId) !== me.id) {
         const tr = await pool.query('SELECT t.text, t.date, p.name AS project FROM tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.id = $1', [id]);
-        if (tr.rows[0]) push.notifyAssigned(Number(b.userId), me.name, tr.rows[0].text, tr.rows[0].date, tr.rows[0].project).catch(e => console.error('push', e.message));
+        if (tr.rows[0]) push.notifyAssigned(Number(b.userId), me.name, tr.rows[0].text, tr.rows[0].date, tr.rows[0].project, id).catch(e => console.error('push', e.message));
       }
       return send(res, 200, { ok: true });
     }

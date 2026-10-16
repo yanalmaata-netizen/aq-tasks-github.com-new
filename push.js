@@ -65,13 +65,14 @@ async function notify(userId, payload) {
 }
 
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-async function notifyAssigned(userId, by, text, date, project) {
+async function notifyAssigned(userId, by, text, date, project, taskId) {
   const p = String(date).split('-');
   const d = Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
   return notify(userId, {
     title: 'Вам поставили задачу',
     body: text + '\nСрок: ' + d + (project ? ' · ' + project : '') + ' · от ' + by,
-    tag: 'assigned'
+    tag: 'assigned',
+    url: taskId ? '/#/task/' + taskId : '/'
   });
 }
 

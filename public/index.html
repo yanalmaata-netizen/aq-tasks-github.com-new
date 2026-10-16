@@ -75,7 +75,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .group { margin-bottom: 24px; }
 .group h2 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 6px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
-.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 150px 160px 80px 32px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 150px 160px 80px 64px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
 .row.warn { background: var(--warn-bg); }
 .row.late { background: var(--late-bg); }
@@ -112,21 +112,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   .add #n-text { grid-column: 1 / -1; order: -1; }
   .add .go { grid-column: 1 / -1; }
   .add #n-details { order: 0; }
-  .row { grid-template-columns: 28px minmax(0, 1fr) 32px; }
-  .row .det { grid-column: 2 / -1; grid-row: 5; }
-  .row .cm { grid-column: 2 / -1; grid-row: 6; }
+  .row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .row .cm { grid-column: 3; grid-row: 1; }
   .row .d { grid-column: 2; grid-row: 2; }
   .row .r { grid-column: 2; grid-row: 3; }
   .row .tag { grid-column: 2; grid-row: 4; justify-self: start; padding-inline: 12px; }
-  .row .x { grid-column: 3; grid-row: 1; }
 }
 
 .row .det { grid-column: 2 / -1; font: inherit; font-size: 15px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; width: 100%; resize: none; overflow: hidden; display: block; }
 .row .det::placeholder { color: var(--muted); }
 .row.done .det { color: var(--muted); }
-.cm { grid-column: 2 / -1; justify-self: start; font: inherit; font-size: 15px; font-weight: 500; color: var(--link); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; min-height: 44px; padding: 0 16px; white-space: nowrap; }
+.cm { font: inherit; font-size: 15px; font-weight: 500; color: var(--link); background: transparent; border: 0; cursor: pointer; min-height: 44px; padding: 0 8px; white-space: pre; border-radius: 10px; }
 .cm.has { font-weight: 700; }
-.cm.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+.row .rt { font: inherit; font-weight: 500; color: var(--fg); background: transparent; border: 0; text-align: left; padding: 8px; min-height: 42px; min-width: 0; width: 100%; cursor: pointer; border-radius: 10px; overflow-wrap: anywhere; }
+.row.done .rt { text-decoration: line-through; color: var(--muted); }
 .add textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; resize: none; }
 #n-details { grid-column: 1 / -1; }
 .thread { background: var(--bg); border-top: 1px solid var(--line); padding: 12px 14px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -288,6 +287,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .kcard .ka button.pri { background:var(--blue); color:#fff; border-color:var(--blue); }
 .colempty { color:var(--muted); font-size:14px; padding:8px 6px; text-align:center; }
 @media (min-width: 900px) { .board { margin:0; padding-inline:0; grid-auto-columns:minmax(0, 1fr); overflow-x:visible; } }
+
+.tpage { display:flex; flex-direction:column; gap:14px; }
+.tback { align-self:flex-start; }
+.tcard { background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.tcard .ttitle { font:inherit; font-size:22px; font-weight:800; letter-spacing:-0.01em; color:var(--fg); background:transparent; border:1px solid transparent; border-radius:12px; padding:8px; width:100%; min-height:48px; }
+.tcard .ttitle:focus, .tcard .ttitle:hover { border-color:var(--line); }
+.tmeta { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.tmeta label, .tlab { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); display:flex; flex-direction:column; gap:6px; }
+.tmeta input, .tmeta select { font:inherit; font-size:16px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-height:46px; width:100%; min-width:0; text-transform:none; letter-spacing:0; font-weight:400; }
+.tstat { display:flex; background:#e8e8ed; border-radius:12px; padding:3px; gap:2px; }
+:root[data-theme="dark"] .tstat { background:#2c2c2e; }
+.tstat button { flex:1; font:inherit; font-size:15px; font-weight:600; border:0; background:transparent; color:var(--muted); min-height:42px; border-radius:10px; cursor:pointer; }
+.tstat button[aria-pressed="true"] { background:var(--blue); color:#fff; }
+.tcard textarea.tdet { font:inherit; font-size:16px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-height:90px; width:100%; resize:none; overflow:hidden; text-transform:none; letter-spacing:0; font-weight:400; }
+.ttag { font-size:14px; font-weight:700; }
+.ttag.warn { color:var(--warn-fg); } .ttag.late { color:var(--late-fg); }
+.tcard .thread { border-top:0; background:transparent; padding:0; }
+.tdel { align-self:flex-start; }
+.kcard { cursor:pointer; }
 </style>
 </head>
 <body>
@@ -315,6 +333,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 
   <div class="pushbar" id="pushbar" hidden><span id="pushbar-t">Включите уведомления, чтобы получать задачи и напоминания о сроках на телефон.</span><button type="button" class="go" id="pushbar-b">Включить</button></div>
 
+  <section id="page-task" hidden>
+    <div class="tpage" id="t-body"></div>
+  </section>
+
   <section id="page-tasks">
    <div id="proj-list-box">
     <form class="padd" id="proj-add" hidden>
@@ -340,7 +362,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <p class="note">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
     <div class="toolbar" id="toolbar">
       <div class="seg" id="seg" role="group" aria-label="Вид"></div>
-      <div class="filters" id="filters" role="group" aria-label="Фильтр"></div>
     </div>
     <div id="list"></div>
    </div>
@@ -591,6 +612,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       if (!manualSeen()) manualOpen();
       return loadAll();
     }).then(function () {
+      route();
       if (!timer) timer = setInterval(loadAll, 15000);
     }).catch(function () {});
   }
@@ -620,31 +642,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var r = el('div', 'row' + (s === 'done' ? ' done' : s === 'late' ? ' late' : s === 'warn' ? ' warn' : ''));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.setAttribute('aria-label', 'Готово');
     cb.onchange = function () { write(api('PATCH', '/api/tasks/' + t.id, { done: cb.checked })); };
-    var tx = el('input'); tx.type = 'text'; tx.value = t.text; tx.setAttribute('aria-label', 'Задача');
-    tx.onchange = function () { var v = tx.value.trim(); if (v && v !== t.text) write(api('PATCH', '/api/tasks/' + t.id, { text: v })); else tx.value = t.text; };
+    var tx = el('button', 'rt', t.text); tx.type = 'button'; tx.setAttribute('aria-label', 'Открыть задачу');
+    tx.onclick = function () { gotoTask(t.id); };
     var dt = el('input', 'd'); dt.type = 'date'; dt.value = t.date; dt.setAttribute('aria-label', 'Дата');
     dt.onchange = function () { if (dt.value && dt.value !== t.date) write(api('PATCH', '/api/tasks/' + t.id, { date: dt.value })); else dt.value = t.date; };
     var rs = respSelect(t);
     var tag = el('span', 'tag', tagText(t));
-    var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Удалить');
-    x.onclick = function () { write(api('DELETE', '/api/tasks/' + t.id)); };
-    var det = el('textarea', 'det'); det.rows = 1; det.value = t.details || ''; det.placeholder = 'Подробнее о задаче'; det.setAttribute('aria-label', 'Подробнее о задаче'); det.maxLength = 4000;
-    var fit = function () { det.style.height = 'auto'; det.style.height = Math.max(44, det.scrollHeight + 2) + 'px'; };
-    det.oninput = fit; setTimeout(fit, 0);
-    det.onchange = function () { var v = det.value.trim(); if (v !== (t.details || '')) write(api('PATCH', '/api/tasks/' + t.id, { details: v })); };
-    var opened = openTask === t.id;
-    var cm = el('button', 'cm' + (t.cc ? ' has' : '') + (opened ? ' on' : ''), opened ? 'Скрыть комментарии' : (t.cc ? 'Комментарии · ' + t.cc : 'Написать комментарий')); cm.type = 'button'; cm.setAttribute('aria-label', 'Комментарии');
-    cm.onclick = function () {
-      openTask = openTask === t.id ? null : t.id;
-      renderList();
-      if (openTask) loadThread(t.id, false);
-    };
-    [cb, tx, dt, rs, tag, x, det, cm].forEach(function (n) { r.appendChild(n); });
+    var cm = el('button', 'cm' + (t.cc ? ' has' : ''), (t.cc ? '💬 ' + t.cc + '  ' : '') + '›'); cm.type = 'button'; cm.setAttribute('aria-label', 'Открыть задачу');
+    cm.onclick = function () { gotoTask(t.id); };
+    [cb, tx, dt, rs, tag, cm].forEach(function (n) { r.appendChild(n); });
     return r;
   }
   function group(title, items) {
     var g = el('div', 'group'); g.appendChild(el('h2', null, title));
-    var c = el('div', 'card'); items.forEach(function (t) { c.appendChild(rowFor(t)); if (openTask === t.id) c.appendChild(threadFor(t)); });
+    var c = el('div', 'card'); items.forEach(function (t) { c.appendChild(rowFor(t)); });
     g.appendChild(c); return g;
   }
   /* ---------- комментарии ---------- */
@@ -660,7 +671,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       var a = document.activeElement;
       var typing = a && a.closest && a.closest('.cform');
       if (quiet && (typing || (prev && prev.length === list.length))) return;
-      renderList();
+      renderTask(!quiet);
     }).catch(function () {});
   }
   function fillMentions(node, text) {
@@ -791,18 +802,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   }
   function renderToolbar(all) {
     var seg = $('seg'); seg.textContent = '';
-    [['list', 'Список'], ['board', 'Доска'], ['status', 'Статусы']].forEach(function (v) {
+    [['list', 'Список'], ['board', 'Доска'], ['status', 'Канбан']].forEach(function (v) {
       var b = el('button', null, v[1]); b.type = 'button'; b.setAttribute('aria-pressed', vView === v[0]);
       b.onclick = function () { vView = v[0]; saveView(); renderList(); };
       seg.appendChild(b);
-    });
-    var fl = $('filters'); fl.textContent = '';
-    [['all', 'Все'], ['late', 'Просрочено'], ['today', 'Сегодня'], ['tomorrow', 'Завтра'], ['new', 'Новые'], ['done', 'Готово']].forEach(function (f) {
-      var n = all.filter(function (t) { return matchFilter(t, f[0]); }).length;
-      var b = el('button', f[0] === 'late' ? 'late' : ''); b.type = 'button'; b.setAttribute('aria-pressed', vFilter === f[0]);
-      b.appendChild(document.createTextNode(f[1])); b.appendChild(el('b', null, String(n)));
-      b.onclick = function () { vFilter = f[0]; saveView(); renderList(); };
-      fl.appendChild(b);
     });
   }
   var STATUSES = [['new', 'Новая'], ['work', 'В работе'], ['done', 'Готово']];
@@ -851,10 +854,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     else if (st === 'new') mv('В работу', 'work', true);
     else if (st === 'work') { mv('‹ Новая', 'new', false); mv('Готово', 'done', true); }
     else mv('Вернуть в работу', 'work', false);
-    var o = el('button', null, 'Открыть'); o.type = 'button';
-    o.onclick = function () { vView = 'list'; vFilter = 'all'; saveView(); openTask = t.id; renderList(); loadThread(t.id, false); };
-    a.appendChild(o);
     k.appendChild(a);
+    k.onclick = function (e) { if (e.target.closest('button')) return; gotoTask(t.id); };
     return k;
   }
   function renderList() {
@@ -863,8 +864,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var all = tasks.filter(function (t) { return t.projectId === curProject; });
     renderToolbar(all);
     if (!all.length) { box.appendChild(el('p', 'empty', 'Задач в проекте пока нет. Добавьте первую выше.')); return; }
-    var pt = all.filter(function (t) { return matchFilter(t, vFilter); });
-    if (!pt.length) { box.appendChild(el('p', 'empty', 'В этом фильтре задач нет.')); return; }
+    var pt = all;
     if (vView === 'board') return renderBoard(box, pt, 'date');
     if (vView === 'status') return renderBoard(box, pt, 'status');
     var open = pt.filter(function (t) { return !t.done; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
@@ -1087,7 +1087,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     tx.value = ''; $('n-details').value = '';
     write(api('POST', '/api/tasks', data));
   };
+  var curTab = 'tasks';
   function show(which) {
+    curTab = which;
+    $('page-task').hidden = true; document.querySelector('.tabs').hidden = false;
     ['tasks', 'cal', 'sum', 'team'].forEach(function (k) {
       $('page-' + k).hidden = k !== which;
       $('tab-' + k).setAttribute('aria-selected', k === which);
@@ -1179,9 +1182,81 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     renderProjects(); renderProjectView();
     var ca = document.activeElement;
     if (!(ca && ca.closest && ca.closest('#cal-day') && (ca.tagName === 'INPUT' || ca.tagName === 'SELECT'))) renderCal();
-    renderSummary(); renderAddSelect(); renderMe();
+    renderSummary(); renderAddSelect(); renderMe(); renderTask(false);
     var ta = a && a.closest && a.closest('#user-add');
     if (!ta) renderTeam();
+  }
+
+  /* ---------- экран задачи ---------- */
+  var savedY = 0, cameInApp = false;
+  function gotoTask(id) { savedY = window.pageYOffset; cameInApp = true; location.hash = '#/task/' + id; }
+  function taskById(id) { for (var i = 0; i < tasks.length; i++) if (tasks[i].id === id) return tasks[i]; return null; }
+  function route() {
+    var m = location.hash.match(/^#\/task\/(\d+)$/);
+    if (m && ME) {
+      var id = Number(m[1]);
+      openTask = id;
+      document.querySelector('.tabs').hidden = true;
+      ['tasks', 'cal', 'sum', 'team'].forEach(function (k) { $('page-' + k).hidden = true; });
+      $('page-task').hidden = false;
+      window.scrollTo(0, 0);
+      renderTask(true);
+      loadThread(id, false);
+    } else if (!$('page-task').hidden) {
+      openTask = null; show(curTab); renderList(); window.scrollTo(0, savedY || 0);
+    }
+  }
+  window.addEventListener('hashchange', route);
+  function leaveTask() { if (cameInApp) history.back(); else location.hash = ''; }
+  function renderTask(force) {
+    if ($('page-task').hidden || !openTask) return;
+    var body = $('t-body');
+    var a = document.activeElement;
+    if (!force && a && body.contains(a) && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+    var ci = body.querySelector('.cform input'); if (!force && ci && ci.value) return;
+    var wasComment = !!(a && a.closest && a.closest('.cform'));
+    body.textContent = '';
+    var back = el('button', 'ghost tback', '‹ Назад'); back.type = 'button'; back.onclick = leaveTask; body.appendChild(back);
+    var t = taskById(openTask);
+    if (!t) { body.appendChild(el('p', 'empty', ready ? 'Задача не найдена. Возможно, её удалили.' : 'Загружаю.')); return; }
+    var card = el('div', 'tcard');
+    var ti = el('input', 'ttitle'); ti.type = 'text'; ti.value = t.text; ti.maxLength = 500; ti.setAttribute('aria-label', 'Название задачи');
+    ti.onchange = function () { var v = ti.value.trim(); if (v && v !== t.text) write(api('PATCH', '/api/tasks/' + t.id, { text: v })); else ti.value = t.text; };
+    card.appendChild(ti);
+    var pr = projectById(t.projectId);
+    if (pr) card.appendChild(el('div', 'note', pr.name));
+    var st = t.status || (t.done ? 'done' : 'new');
+    var seg = el('div', 'tstat');
+    [['new', 'Новая'], ['work', 'В работе'], ['done', 'Готово']].forEach(function (x) {
+      var b = el('button', null, x[1]); b.type = 'button'; b.setAttribute('aria-pressed', st === x[0]);
+      b.onclick = function () { api('PATCH', '/api/tasks/' + t.id, { status: x[0] }).then(loadAll).then(function () { renderTask(true); }).catch(function () {}); };
+      seg.appendChild(b);
+    });
+    card.appendChild(seg);
+    var tg = tagText(t);
+    if (tg) card.appendChild(el('div', 'ttag ' + state(t), tg));
+    var meta = el('div', 'tmeta');
+    var l1 = el('label', null, 'Срок'); var dt = el('input'); dt.type = 'date'; dt.value = t.date;
+    dt.onchange = function () { if (dt.value && dt.value !== t.date) write(api('PATCH', '/api/tasks/' + t.id, { date: dt.value })); else dt.value = t.date; };
+    l1.appendChild(dt);
+    var l2 = el('label', null, 'Ответственный'); l2.appendChild(respSelect(t));
+    meta.appendChild(l1); meta.appendChild(l2); card.appendChild(meta);
+    var l3 = el('label', 'tlab', 'Подробнее о задаче');
+    var det = el('textarea', 'tdet'); det.value = t.details || ''; det.placeholder = 'Что нужно сделать, адрес, контакты'; det.maxLength = 4000;
+    var fit = function () { det.style.height = 'auto'; det.style.height = Math.max(90, det.scrollHeight + 2) + 'px'; };
+    det.oninput = fit; setTimeout(fit, 0);
+    det.onchange = function () { var v = det.value.trim(); if (v !== (t.details || '')) write(api('PATCH', '/api/tasks/' + t.id, { details: v })); };
+    l3.appendChild(det); card.appendChild(l3);
+    var l4 = el('div', 'tlab', 'Переписка'); card.appendChild(l4);
+    card.appendChild(threadFor(t));
+    var del = el('button', 'ghost danger tdel', 'Удалить задачу'); del.type = 'button';
+    del.onclick = function () {
+      if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; setTimeout(function () { del.dataset.sure = ''; del.textContent = 'Удалить задачу'; }, 4000); return; }
+      api('DELETE', '/api/tasks/' + t.id).then(loadAll).then(function () { savedY = savedY || 0; leaveTask(); }).catch(function () {});
+    };
+    card.appendChild(del);
+    body.appendChild(card);
+    if (wasComment) { var ni = body.querySelector('.cform input'); if (ni) ni.focus(); }
   }
 
   boot();

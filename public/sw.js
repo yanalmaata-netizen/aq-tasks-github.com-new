@@ -16,7 +16,13 @@ self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-    for (var i = 0; i < list.length; i++) { if ('focus' in list[i]) return list[i].focus(); }
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if ('focus' in c) {
+        if ('navigate' in c) return c.navigate(url).then(function (n) { return (n || c).focus(); }).catch(function () { return c.focus(); });
+        return c.focus();
+      }
+    }
     return self.clients.openWindow(url);
   }));
 });
