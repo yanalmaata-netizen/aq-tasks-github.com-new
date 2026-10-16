@@ -240,7 +240,7 @@ async function api(req, res, url) {
           if (id === me.id && b.role !== 'admin') return send(res, 400, { error: 'self' });
           vals.push(b.role === 'admin' ? 'admin' : 'staff'); sets.push('role=$' + vals.length);
         }
-        if (b.resetCode) { newCode = String(b.code || '').trim() || genCode(); if (newCode.length < 4) return send(res, 400, { error: 'bad' }); vals.push(hashCode(newCode)); sets.push('code_hash=$' + vals.length); }
+        if (b.resetCode) { newCode = String(b.code || '').trim() || DEFAULT_CODE; if (newCode.length < 4) return send(res, 400, { error: 'bad' }); vals.push(hashCode(newCode)); sets.push('code_hash=$' + vals.length); }
         if (!sets.length) return send(res, 400, { error: 'bad' });
         vals.push(id);
         try { await pool.query('UPDATE users SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals); }
