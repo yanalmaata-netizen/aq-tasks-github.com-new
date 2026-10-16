@@ -75,7 +75,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .group { margin-bottom: 24px; }
 .group h2 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 6px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
-.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 150px 160px 80px 60px 32px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 150px 160px 80px 32px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
 .row.warn { background: var(--warn-bg); }
 .row.late { background: var(--late-bg); }
@@ -111,16 +111,24 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   .add { grid-template-columns: 1fr 1fr; }
   .add #n-text { grid-column: 1 / -1; order: -1; }
   .add .go { grid-column: 1 / -1; }
+  .add #n-details { order: 0; }
   .row { grid-template-columns: 28px minmax(0, 1fr) 32px; }
-  .row .cm { grid-column: 3; grid-row: 2; }
+  .row .det { grid-column: 2 / -1; grid-row: 5; }
+  .row .cm { grid-column: 2 / -1; grid-row: 6; }
   .row .d { grid-column: 2; grid-row: 2; }
   .row .r { grid-column: 2; grid-row: 3; }
   .row .tag { grid-column: 2; grid-row: 4; justify-self: start; padding-inline: 12px; }
   .row .x { grid-column: 3; grid-row: 1; }
 }
 
-.cm { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--link); cursor: pointer; min-height: 40px; border-radius: 10px; white-space: nowrap; }
+.row .det { grid-column: 2 / -1; font: inherit; font-size: 15px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; width: 100%; resize: none; overflow: hidden; display: block; }
+.row .det::placeholder { color: var(--muted); }
+.row.done .det { color: var(--muted); }
+.cm { grid-column: 2 / -1; justify-self: start; font: inherit; font-size: 15px; font-weight: 500; color: var(--link); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; min-height: 44px; padding: 0 16px; white-space: nowrap; }
 .cm.has { font-weight: 700; }
+.cm.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+.add textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; resize: none; }
+#n-details { grid-column: 1 / -1; }
 .thread { background: var(--bg); border-top: 1px solid var(--line); padding: 12px 14px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
 .cmt { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
 .cmt .who { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
@@ -292,6 +300,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       <input type="date" id="n-date" aria-label="Дата" required>
       <input type="text" id="n-text" placeholder="Новая задача" aria-label="Задача" required autocomplete="off">
       <select id="n-resp" aria-label="Ответственный" required></select>
+      <textarea id="n-details" rows="2" placeholder="Подробнее о задаче" aria-label="Подробнее о задаче" maxlength="4000"></textarea>
       <button class="go" id="n-go" type="submit">Добавить</button>
     </form>
     <p class="note">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
@@ -581,13 +590,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var tag = el('span', 'tag', tagText(t));
     var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Удалить');
     x.onclick = function () { write(api('DELETE', '/api/tasks/' + t.id)); };
-    var cm = el('button', 'cm' + (t.cc ? ' has' : ''), '💬 ' + (t.cc || '')); cm.type = 'button'; cm.setAttribute('aria-label', 'Комментарии');
+    var det = el('textarea', 'det'); det.rows = 1; det.value = t.details || ''; det.placeholder = 'Подробнее о задаче'; det.setAttribute('aria-label', 'Подробнее о задаче'); det.maxLength = 4000;
+    var fit = function () { det.style.height = 'auto'; det.style.height = Math.max(44, det.scrollHeight + 2) + 'px'; };
+    det.oninput = fit; setTimeout(fit, 0);
+    det.onchange = function () { var v = det.value.trim(); if (v !== (t.details || '')) write(api('PATCH', '/api/tasks/' + t.id, { details: v })); };
+    var opened = openTask === t.id;
+    var cm = el('button', 'cm' + (t.cc ? ' has' : '') + (opened ? ' on' : ''), opened ? 'Скрыть комментарии' : (t.cc ? 'Комментарии · ' + t.cc : 'Написать комментарий')); cm.type = 'button'; cm.setAttribute('aria-label', 'Комментарии');
     cm.onclick = function () {
       openTask = openTask === t.id ? null : t.id;
       renderList();
       if (openTask) loadThread(t.id, false);
     };
-    [cb, tx, dt, rs, tag, cm, x].forEach(function (n) { r.appendChild(n); });
+    [cb, tx, dt, rs, tag, x, det, cm].forEach(function (n) { r.appendChild(n); });
     return r;
   }
   function group(title, items) {
@@ -941,8 +955,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var d = $('n-date').value, tx = $('n-text'), uid = Number($('n-resp').value);
     if (!d || !tx.value.trim() || !uid) return;
     if (!curProject) return;
-    var data = { date: d, text: tx.value.trim(), userId: uid, projectId: curProject };
-    tx.value = '';
+    var data = { date: d, text: tx.value.trim(), userId: uid, projectId: curProject, details: $('n-details').value.trim() };
+    tx.value = ''; $('n-details').value = '';
     write(api('POST', '/api/tasks', data));
   };
   function show(which) {
@@ -1032,7 +1046,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   function renderAll() { renderProjects(); renderProjectView(); renderList(); }
   function render() {
     var a = document.activeElement;
-    var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date' || a.tagName === 'SELECT');
+    var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
     if (!typing) renderList();
     renderProjects(); renderProjectView();
     var ca = document.activeElement;

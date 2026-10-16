@@ -38,6 +38,7 @@ async function init() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
   await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INT');
+  await pool.query("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT ''");
   await pool.query(`CREATE TABLE IF NOT EXISTS comments (
     id SERIAL PRIMARY KEY,
     task_id INT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -96,6 +97,7 @@ function checkCode(code, stored) {
 function genCode() { return String(crypto.randomInt(10000, 100000)); }
 const DEFAULT_CODE = '1111';
 const cleanLong = s => String(s || '').trim().slice(0, 2000);
+const cleanDetails = s => String(s || '').trim().slice(0, 4000);
 
 const attempts = new Map();
 function tooMany(key) {
@@ -344,7 +346,7 @@ async function api(req, res, url) {
     if (!m) return send(res, 404, { error: 'not_found' });
     const id = m[1] ? Number(m[1]) : null;
     if (req.method === 'GET' && !id) {
-      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
+      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.details, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
         (SELECT count(*)::int FROM comments c WHERE c.task_id = t.id) AS cc
         FROM tasks t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.date, t.id`);
       return send(res, 200, r.rows);
@@ -355,7 +357,7 @@ async function api(req, res, url) {
       const b = await readBody(req);
       const uid = Number(b.userId), nm = await userName(uid), pid = Number(b.projectId);
       if (!okDate(b.date) || !clean(b.text) || !nm || !(await projectOk(pid))) return send(res, 400, { error: 'bad' });
-      const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id, project_id) VALUES($1,$2,$3,$4,$5) RETURNING id', [b.date, clean(b.text), nm, uid, pid]);
+      const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id, project_id, details) VALUES($1,$2,$3,$4,$5,$6) RETURNING id', [b.date, clean(b.text), nm, uid, pid, cleanDetails(b.details)]);
       if (uid !== me.id) {
         const pn = await pool.query('SELECT name FROM projects WHERE id = $1', [pid]);
         push.notifyAssigned(uid, me.name, clean(b.text), b.date, pn.rows[0] && pn.rows[0].name).catch(e => console.error('push', e.message));
@@ -373,6 +375,7 @@ async function api(req, res, url) {
         vals.push(nm); sets.push('resp=$' + vals.length);
       }
       if (b.projectId !== undefined) { if (!(await projectOk(Number(b.projectId)))) return send(res, 400, { error: 'bad' }); vals.push(Number(b.projectId)); sets.push('project_id=$' + vals.length); }
+      if (b.details !== undefined) { vals.push(cleanDetails(b.details)); sets.push('details=$' + vals.length); }
       if (b.done !== undefined) { vals.push(!!b.done); sets.push('done=$' + vals.length); }
       if (!sets.length) return send(res, 400, { error: 'bad' });
       vals.push(id);
