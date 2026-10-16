@@ -236,6 +236,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .pushbar[hidden] { display:none; }
 .pushbar span { flex:1; }
 .pushbar .go { min-height:40px; padding:0 16px; width:auto; }
+.manual { align-items:flex-end; }
+.manual .sheet { max-width:480px; max-height:88vh; overflow-y:auto; text-align:left; gap:0; padding:24px 20px 20px; }
+.manual h2 { font-size:22px; margin:0 0 4px; }
+.manual .lead { color:var(--muted); font-size:15px; margin:0 0 16px; }
+.mstep { display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+.mnum { flex:none; width:28px; height:28px; border-radius:50%; background:#0162d3; color:#fff; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; }
+.mstep h3 { margin:0 0 3px; font-size:16px; }
+.mstep p { margin:0; font-size:14px; line-height:1.45; color:var(--muted); }
+.mstep p b { color:inherit; font-weight:600; }
+.manual .go { margin-top:14px; }
 </style>
 </head>
 <body>
@@ -348,6 +358,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   </form>
 </div>
 
+<div class="modal manual" id="manual" hidden>
+  <div class="sheet" role="dialog" aria-label="Инструкция">
+    <h2>Как пользоваться</h2>
+    <p class="lead">AQ Задачи. Одна минута, чтобы начать.</p>
+    <div class="mstep"><div class="mnum">1</div><div><h3>Установите на телефон</h3><p>iPhone: откройте ссылку в Safari, нажмите «Поделиться», затем «На экран Домой». Android: в Chrome меню, затем «Установить приложение». Дальше открывайте приложение с иконки.</p></div></div>
+    <div class="mstep"><div class="mnum">2</div><div><h3>Включите уведомления</h3><p>Нажмите «Включить» в оранжевой полосе и разрешите. Придёт сигнал, когда вам поставили задачу, и каждое утро в 09:00 о сроках. Звук настраивается в телефоне: Настройки, Уведомления, AQ Задачи.</p></div></div>
+    <div class="mstep"><div class="mnum">3</div><div><h3>Выберите проект</h3><p>Вкладка «Проекты». Внутри проекта все его задачи. Добавьте задачу: текст, срок, ответственный.</p></div></div>
+    <div class="mstep"><div class="mnum">4</div><div><h3>Следите за цветом</h3><p>Жёлтая задача: срок сегодня или завтра. Красная: просрочена. Выполнили, отметьте галочкой.</p></div></div>
+    <div class="mstep"><div class="mnum">5</div><div><h3>Переписывайтесь в задаче</h3><p>Нажмите на значок комментариев у задачи. Сюда пишем вопросы и запросы на перенос срока. Чтобы обратиться к коллеге, поставьте @ и выберите имя. Он получит сообщение.</p></div></div>
+    <div class="mstep"><div class="mnum">6</div><div><h3>Календарь</h3><p>Вкладка «Календарь». Выберите день и поставьте задачу коллеге. Все задачи по дням видны всем.</p></div></div>
+    <div class="mstep"><div class="mnum">7</div><div><h3>Сводка на день</h3><p>Вкладка «Сводка на день». Просрочено, сегодня, завтра по каждому сотруднику.</p></div></div>
+    <div class="mstep"><div class="mnum">8</div><div><h3>Telegram, по желанию</h3><p>Нажмите на своё имя вверху, затем «Подключить Telegram». Утренняя сводка придёт и туда.</p></div></div>
+    <button type="button" class="go" id="m-close">Понятно</button>
+  </div>
+</div>
+
 <div class="modal" id="profile" hidden>
   <div class="sheet" role="dialog" aria-label="Профиль">
     <div class="big-av" id="p-av"></div>
@@ -362,6 +388,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <button type="button" class="ghost" id="p-tg-test" hidden>Прислать тест в Telegram</button>
     <button type="button" class="go" id="p-upload">Загрузить фото</button>
     <button type="button" class="ghost" id="p-remove">Убрать фото</button>
+    <button type="button" class="ghost" id="p-manual">Инструкция</button>
     <button type="button" class="ghost" id="p-logout">Выйти</button>
     <button type="button" class="ghost" id="p-close">Закрыть</button>
     <div class="err" id="p-err"></div>
@@ -514,6 +541,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       $('n-date').value = iso(new Date());
       $('admin-box').hidden = ME.role !== 'admin';
       pushSync();
+      if (!manualSeen()) manualOpen();
       return loadAll();
     }).then(function () {
       if (!timer) timer = setInterval(loadAll, 15000);
@@ -869,6 +897,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   };
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !$('profile').hidden) tgStatus(); });
   $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; tgStatus(); pushUi(); };
+  function manualSeen() { try { return localStorage.getItem('aq_manual') === '1'; } catch (e) { return false; } }
+  function manualOpen() { $('manual').hidden = false; }
+  function manualClose() { $('manual').hidden = true; try { localStorage.setItem('aq_manual', '1'); } catch (e) {} }
+  $('m-close').onclick = manualClose;
+  $('manual').onclick = function (e) { if (e.target === $('manual')) manualClose(); };
+  $('p-manual').onclick = function () { $('profile').hidden = true; manualOpen(); };
   $('p-close').onclick = function () { $('profile').hidden = true; };
   $('profile').onclick = function (e) { if (e.target === $('profile')) $('profile').hidden = true; };
   $('p-logout').onclick = function () { api('POST', '/api/logout').catch(function () {}).then(showAuth); };
