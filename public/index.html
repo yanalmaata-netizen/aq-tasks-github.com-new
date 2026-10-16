@@ -124,6 +124,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .row.done .det { color: var(--muted); }
 .cm { font: inherit; font-size: 15px; font-weight: 500; color: var(--link); background: transparent; border: 0; cursor: pointer; min-height: 44px; padding: 0 8px; white-space: pre; border-radius: 10px; }
 .cm.has { font-weight: 700; }
+.row { cursor: pointer; }
 .row .rt { font: inherit; font-weight: 500; color: var(--fg); background: transparent; border: 0; text-align: left; padding: 8px; min-height: 42px; min-width: 0; width: 100%; cursor: pointer; border-radius: 10px; overflow-wrap: anywhere; }
 .row.done .rt { text-decoration: line-through; color: var(--muted); }
 .add textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; resize: none; }
@@ -651,6 +652,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var cm = el('button', 'cm' + (t.cc ? ' has' : ''), (t.cc ? '💬 ' + t.cc + '  ' : '') + '›'); cm.type = 'button'; cm.setAttribute('aria-label', 'Открыть задачу');
     cm.onclick = function () { gotoTask(t.id); };
     [cb, tx, dt, rs, tag, cm].forEach(function (n) { r.appendChild(n); });
+    r.onclick = function (e) { if (e.target.closest('input, select, label')) return; gotoTask(t.id); };
     return r;
   }
   function group(title, items) {
