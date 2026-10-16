@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const tg = require('./tg');
 
 const PORT = process.env.PORT || 3000;
 const pool = new Pool({
@@ -155,6 +156,14 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true });
     }
     if (url === '/api/me' && req.method === 'GET') return send(res, 200, pub(me, true));
+
+    // ---- telegram ----
+    if (url === '/api/tg/status' && req.method === 'GET') return send(res, 200, await tg.status(me.id));
+    if (url === '/api/tg/link' && req.method === 'POST') {
+      const u = await tg.link(me.id);
+      return u ? send(res, 200, { url: u }) : send(res, 503, { error: 'off' });
+    }
+    if (url === '/api/tg/test' && req.method === 'POST') return send(res, 200, { ok: await tg.test(me.id) });
 
     // ---- пользователи ----
     if (url === '/api/users' && req.method === 'GET') {
@@ -375,5 +384,5 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-init().then(() => server.listen(PORT, () => console.log('AQ tasks on ' + PORT)))
+init().then(() => server.listen(PORT, () => { console.log('AQ tasks on ' + PORT); tg.start(pool).catch(e => console.error('tg start', e.message)); }))
   .catch(e => { console.error('DB init failed', e); process.exit(1); });

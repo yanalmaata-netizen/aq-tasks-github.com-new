@@ -294,6 +294,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <h2 id="p-name"></h2>
     <p class="note" id="p-role"></p>
     <input type="file" id="p-file" accept="image/*" hidden>
+    <div class="note" id="p-tg-note"></div>
+    <button type="button" class="go" id="p-tg" hidden>Подключить Telegram</button>
+    <button type="button" class="ghost" id="p-tg-test" hidden>Прислать тест в Telegram</button>
     <button type="button" class="go" id="p-upload">Загрузить фото</button>
     <button type="button" class="ghost" id="p-remove">Убрать фото</button>
     <button type="button" class="ghost" id="p-logout">Выйти</button>
@@ -697,7 +700,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     $('p-name').textContent = ME.name;
     $('p-role').textContent = ME.role === 'admin' ? 'Администратор' : 'Сотрудник';
   }
-  $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; };
+  function tgStatus() {
+    api('GET', '/api/tg/status').then(function (st) {
+      $('p-tg').hidden = !st.enabled || st.linked; $('p-tg-test').hidden = !st.enabled || !st.linked;
+      $('p-tg-note').textContent = !st.enabled ? '' : st.linked ? 'Telegram подключен' : 'Telegram не подключен';
+    }).catch(function () {});
+  }
+  $('p-tg').onclick = function () {
+    api('POST', '/api/tg/link').then(function (r) { window.open(r.url, '_blank'); $('p-tg-note').textContent = 'Нажмите Start в Telegram. Потом вернитесь и откройте профиль снова.'; }).catch(function () { $('p-err').textContent = 'Не удалось получить ссылку.'; });
+  };
+  $('p-tg-test').onclick = function () {
+    var b = $('p-tg-test'); b.textContent = 'Отправляю';
+    api('POST', '/api/tg/test').then(function (r) { b.textContent = r.ok ? 'Отправлено. Проверьте Telegram' : 'Не удалось отправить'; }).catch(function () { b.textContent = 'Не удалось отправить'; }).then(function () { setTimeout(function () { b.textContent = 'Прислать тест в Telegram'; }, 3000); });
+  };
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !$('profile').hidden) tgStatus(); });
+  $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; tgStatus(); };
   $('p-close').onclick = function () { $('profile').hidden = true; };
   $('profile').onclick = function (e) { if (e.target === $('profile')) $('profile').hidden = true; };
   $('p-logout').onclick = function () { api('POST', '/api/logout').catch(function () {}).then(showAuth); };
