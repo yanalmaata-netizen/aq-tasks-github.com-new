@@ -35,6 +35,13 @@ async function tg(method, params, timeoutMs) {
   return j.result;
 }
 
+async function sendGroup(chatId, text) {
+  try { await tg('sendMessage', { chat_id: chatId, text, disable_web_page_preview: true }); }
+  catch (e) {
+    console.error('tg group send failed', chatId, e.message);
+    if (e.code === 403 || e.code === 400) await pool.query('DELETE FROM tg_groups WHERE chat_id = $1', [chatId]).catch(() => {});
+  }
+}
 async function send(chatId, text, userId) {
   const parts = [];
   let rest = String(text);
@@ -104,6 +111,17 @@ function overdueText(tasks, now) {
     + section('Всего', g.late, { who: true, late: true })
     + '\n' + APP_URL;
 }
+function groupText(tasks, now) {
+  const g = split(tasks, now);
+  if (!g.late.length) return null;
+  const by = new Map();
+  g.late.forEach(t => { const k = t.resp || 'Не назначен'; if (!by.has(k)) by.set(k, []); by.get(k).push(t); });
+  let out = 'Просроченные задачи. ' + cap(longToday(now)) + '\nВсего: ' + g.late.length + '\n';
+  [...by.entries()].sort((a, b) => b[1].length - a[1].length).forEach(([name, list]) => {
+    out += '\n' + name + ': ' + list.length + '\n' + list.map(t => '– ' + t.text + (t.project ? ' · ' + t.project : '') + ' · срок был ' + shortDate(t.date)).join('\n') + '\n';
+  });
+  return out + '\n' + APP_URL;
+}
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 /* ---------- расписание ---------- */
@@ -134,6 +152,9 @@ async function runNoon(now) {
   const t = overdueText(tasks, now);
   if (!t) return;
   for (const u of await usersByPhones(OVERDUE_PHONES)) await send(u.tg_chat_id, t, u.id);
+  const gt = groupText(tasks, now);
+  const gr = await pool.query('SELECT chat_id FROM tg_groups');
+  for (const g of gr.rows) await sendGroup(Number(g.chat_id), gt);
 }
 async function tick() {
   try {
@@ -144,8 +165,35 @@ async function tick() {
 }
 
 /* ---------- входящие ---------- */
+const isGroup = c => c && (c.type === 'group' || c.type === 'supergroup');
+async function addGroup(chat) {
+  const r = await pool.query('INSERT INTO tg_groups(chat_id, title) VALUES($1,$2) ON CONFLICT (chat_id) DO UPDATE SET title = EXCLUDED.title RETURNING (xmax = 0) AS fresh', [chat.id, chat.title || '']);
+  return r.rows[0].fresh;
+}
+async function onMyChatMember(m) {
+  if (!m || !isGroup(m.chat) || !m.new_chat_member) return;
+  const st = m.new_chat_member.status;
+  if (st === 'member' || st === 'administrator') {
+    await addGroup(m.chat);
+    await sendGroup(m.chat.id, 'Группа подключена. Каждый день в 12:00 сюда придет список просроченных задач по сотрудникам.');
+  } else if (st === 'left' || st === 'kicked') {
+    await pool.query('DELETE FROM tg_groups WHERE chat_id = $1', [m.chat.id]);
+  }
+}
 async function onMessage(m) {
-  if (!m || !m.chat || m.chat.type !== 'private') return;
+  if (!m || !m.chat) return;
+  if (m.migrate_to_chat_id) {
+    await pool.query('UPDATE tg_groups SET chat_id = $1 WHERE chat_id = $2', [m.migrate_to_chat_id, m.chat.id]);
+    return;
+  }
+  if (isGroup(m.chat)) {
+    if (/^\/start(@\w+)?(\s|$)/.test(String(m.text || '').trim())) {
+      await addGroup(m.chat);
+      await sendGroup(m.chat.id, 'Группа подключена. Каждый день в 12:00 сюда придет список просроченных задач по сотрудникам.');
+    }
+    return;
+  }
+  if (m.chat.type !== 'private') return;
   const chatId = m.chat.id, text = String(m.text || '').trim();
   if (!text.startsWith('/start')) {
     return send(chatId, 'Я присылаю уведомления по задачам AQ miniSUITES. Чтобы подключиться, откройте приложение, нажмите на свое имя вверху и выберите «Подключить Telegram».\n' + APP_URL);
@@ -167,8 +215,8 @@ async function onMessage(m) {
 async function poll() {
   for (;;) {
     try {
-      const ups = await tg('getUpdates', { offset, timeout: 25, allowed_updates: ['message'] }, 40000);
-      for (const u of ups) { offset = u.update_id + 1; try { await onMessage(u.message); } catch (e) { console.error('tg msg', e.message); } }
+      const ups = await tg('getUpdates', { offset, timeout: 25, allowed_updates: ['message', 'my_chat_member'] }, 40000);
+      for (const u of ups) { offset = u.update_id + 1; try { if (u.my_chat_member) await onMyChatMember(u.my_chat_member); else await onMessage(u.message); } catch (e) { console.error('tg msg', e.message); } }
     } catch (e) {
       console.error('tg poll', e.message);
       await new Promise(r => setTimeout(r, e.code === 409 ? 8000 : 4000));
@@ -181,6 +229,7 @@ async function start(p) {
   pool = p;
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tg_chat_id BIGINT');
   await pool.query(`CREATE TABLE IF NOT EXISTS tg_links (token TEXT PRIMARY KEY, user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS tg_groups (chat_id BIGINT PRIMARY KEY, title TEXT)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS tg_runs (key TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (key, day))`);
   if (!TOKEN) { console.log('Telegram: токен не задан, бот выключен'); return; }
   try {
