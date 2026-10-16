@@ -195,6 +195,43 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   .urow { grid-template-columns: 44px minmax(0, 1fr); }
   .urow .acts { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+.calhead { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.calhead h1 { margin: 0; font-size: 22px; flex: 1; min-width: 140px; text-align: center; }
+.calhead .ghost { min-height: 44px; min-width: 44px; padding: 0 14px; }
+.calcard { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 10px; margin-bottom: 20px; }
+.calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cwd { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 0 6px; text-transform: uppercase; }
+.cday { font: inherit; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 12px; min-height: 64px; padding: 6px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.cday:hover { background: var(--bg); }
+.cday.other { opacity: .35; }
+.cday .n { font-weight: 500; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cday.today .n { background: var(--blue); color: #fff; font-weight: 700; }
+.cday.sel { border-color: var(--blue); background: var(--bg); }
+.cdots { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+.cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+.cdot.late { background: #d93025; }
+.cdot.warn { background: #f5a300; }
+.cdot.done { background: var(--muted); opacity: .5; }
+.cmore { font-size: 11px; color: var(--muted); line-height: 7px; }
+.daypanel h2 { font-size: 18px; margin: 0 0 10px 6px; }
+.crow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+.crow:first-child { border-top: 0; }
+.crow.warn { background: var(--warn-bg); }
+.crow.late { background: var(--late-bg); }
+.crow input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--blue); margin: 0; cursor: pointer; }
+.crow.done .ct { text-decoration: line-through; color: var(--muted); }
+.crow .ct { overflow-wrap: anywhere; }
+.crow small { display: block; color: var(--muted); font-size: 12px; }
+.calform { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px auto; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; margin-top: 12px; }
+.calform input, .calform select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 46px; min-width: 0; width: 100%; }
+.calform .go { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; padding: 0 22px; min-height: 46px; cursor: pointer; }
+@media (max-width: 680px) {
+  .calform { grid-template-columns: 1fr 1fr; }
+  .calform input[type=text] { grid-column: 1 / -1; }
+  .calform .go { grid-column: 1 / -1; }
+  .cday { min-height: 54px; padding: 4px 2px; }
+}
 </style>
 </head>
 <body>
@@ -215,6 +252,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 <div class="wrap" id="app" hidden>
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-tasks" aria-selected="true">Проекты</button>
+    <button role="tab" id="tab-cal" aria-selected="false">Календарь</button>
     <button role="tab" id="tab-sum" aria-selected="false">Сводка на день</button>
     <button role="tab" id="tab-team" aria-selected="false">Команда</button>
   </div>
@@ -243,6 +281,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <p class="note">Жёлтая строка: остался день или срок сегодня. Красная: срок прошёл.</p>
     <div id="list"></div>
    </div>
+  </section>
+
+  <section id="page-cal" hidden>
+    <div class="calhead">
+      <button type="button" class="ghost" id="cal-prev" aria-label="Предыдущий месяц">‹</button>
+      <h1 id="cal-title"></h1>
+      <button type="button" class="ghost" id="cal-next" aria-label="Следующий месяц">›</button>
+      <button type="button" class="ghost" id="cal-today">Сегодня</button>
+    </div>
+    <div class="calcard"><div class="calgrid" id="cal-grid"></div></div>
+    <div class="daypanel" id="cal-day"></div>
   </section>
 
   <section id="page-sum" hidden>
@@ -798,14 +847,88 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     write(api('POST', '/api/tasks', data));
   };
   function show(which) {
-    ['tasks', 'sum', 'team'].forEach(function (k) {
+    ['tasks', 'cal', 'sum', 'team'].forEach(function (k) {
       $('page-' + k).hidden = k !== which;
       $('tab-' + k).setAttribute('aria-selected', k === which);
     });
   }
   $('tab-tasks').onclick = function () { show('tasks'); };
+  $('tab-cal').onclick = function () { show('cal'); renderCal(); };
   $('tab-sum').onclick = function () { show('sum'); };
   $('tab-team').onclick = function () { show('team'); };
+
+  /* ---------- календарь ---------- */
+  var calMonth = (function () { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1, 12); })();
+  var calSel = iso(new Date()), calResp = '', calProj = '';
+  var fmtMonth = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' });
+  function renderCal() {
+    if (!ready || $('page-cal').hidden) return;
+    $('cal-title').textContent = cap(new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(calMonth)) + ' ' + calMonth.getFullYear();
+    var by = {};
+    tasks.forEach(function (t) { (by[t.date] = by[t.date] || []).push(t); });
+    var g = $('cal-grid'); g.textContent = '';
+    ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(function (w) { g.appendChild(el('div', 'cwd', w)); });
+    var first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1, 12);
+    var lead = (first.getDay() + 6) % 7;
+    var start = new Date(first.getFullYear(), first.getMonth(), 1 - lead, 12);
+    var todayIso = iso(new Date());
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i, 12), k = iso(d);
+      if (i >= 35 && d.getMonth() !== calMonth.getMonth()) break;
+      var b = el('button', 'cday' + (d.getMonth() !== calMonth.getMonth() ? ' other' : '') + (k === todayIso ? ' today' : '') + (k === calSel ? ' sel' : ''));
+      b.type = 'button';
+      b.appendChild(el('span', 'n', String(d.getDate())));
+      var list = by[k] || [];
+      if (list.length) {
+        var dots = el('span', 'cdots');
+        list.slice(0, 4).forEach(function (t) { dots.appendChild(el('span', 'cdot ' + (state(t) === 'ok' ? '' : state(t)))); });
+        if (list.length > 4) dots.appendChild(el('span', 'cmore', '+' + (list.length - 4)));
+        b.appendChild(dots);
+      }
+      (function (kk) { b.onclick = function () { calSel = kk; renderCal(); }; })(k);
+      g.appendChild(b);
+    }
+    renderDay(by[calSel] || []);
+  }
+  function renderDay(list) {
+    var box = $('cal-day'); box.textContent = '';
+    var d = parse(calSel), dd = dayDiff(calSel);
+    box.appendChild(el('h2', null, (dd === 0 ? 'Сегодня · ' : dd === 1 ? 'Завтра · ' : '') + cap(fmtLong.format(d))));
+    var c = el('div', 'card');
+    if (!list.length) c.appendChild(el('div', 'empty', 'На этот день задач нет'));
+    list.slice().sort(function (a, b) { return ((a.done ? 1 : 0) - (b.done ? 1 : 0)) || (a.id - b.id); }).forEach(function (t) {
+      var s = state(t);
+      var r = el('div', 'crow' + (s === 'done' ? ' done' : s === 'late' ? ' late' : s === 'warn' ? ' warn' : ''));
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.setAttribute('aria-label', 'Готово');
+      cb.onchange = function () { write(api('PATCH', '/api/tasks/' + t.id, { done: cb.checked })); };
+      var mid = el('div', 'ct', t.text);
+      var pr = projectById(t.projectId); if (pr) mid.appendChild(el('small', null, pr.name));
+      r.appendChild(cb); r.appendChild(mid); r.appendChild(chip(t)); c.appendChild(r);
+    });
+    box.appendChild(c);
+    var f = el('form', 'calform');
+    var tx = el('input'); tx.type = 'text'; tx.placeholder = 'Что нужно сделать'; tx.setAttribute('aria-label', 'Задача'); tx.required = true; tx.autocomplete = 'off';
+    var rs = el('select'); rs.setAttribute('aria-label', 'Кому');
+    users.forEach(function (u) { var o = el('option', null, u.name); o.value = u.id; rs.appendChild(o); });
+    rs.value = calResp || String(ME.id);
+    var ps = el('select'); ps.setAttribute('aria-label', 'Проект');
+    projects.forEach(function (p) { var o = el('option', null, p.name); o.value = p.id; ps.appendChild(o); });
+    ps.value = calProj || String(curProject || (projects[0] && projects[0].id) || '');
+    rs.onchange = function () { calResp = rs.value; }; ps.onchange = function () { calProj = ps.value; };
+    var go = el('button', 'go', 'Поставить задачу'); go.type = 'submit';
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var v = tx.value.trim(); if (!v || !ps.value) return;
+      go.disabled = true;
+      api('POST', '/api/tasks', { date: calSel, text: v, userId: Number(rs.value), projectId: Number(ps.value) })
+        .then(loadAll).catch(function () {}).then(function () { go.disabled = false; });
+    };
+    f.appendChild(tx); f.appendChild(rs); f.appendChild(ps); f.appendChild(go);
+    box.appendChild(f);
+  }
+  $('cal-prev').onclick = function () { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1, 12); renderCal(); };
+  $('cal-next').onclick = function () { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1, 12); renderCal(); };
+  $('cal-today').onclick = function () { var d = new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1, 12); calSel = iso(d); renderCal(); };
 
   function renderAll() { renderProjects(); renderProjectView(); renderList(); }
   function render() {
@@ -813,6 +936,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     var typing = a && a.closest && a.closest('#list') && (a.type === 'text' || a.type === 'date' || a.tagName === 'SELECT');
     if (!typing) renderList();
     renderProjects(); renderProjectView();
+    var ca = document.activeElement;
+    if (!(ca && ca.closest && ca.closest('#cal-day') && (ca.tagName === 'INPUT' || ca.tagName === 'SELECT'))) renderCal();
     renderSummary(); renderAddSelect(); renderMe();
     var ta = a && a.closest && a.closest('#user-add');
     if (!ta) renderTeam();
