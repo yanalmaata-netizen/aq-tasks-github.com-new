@@ -47,6 +47,9 @@ async function init() {
   const pc = await pool.query('SELECT count(*)::int AS n FROM projects');
   if (pc.rows[0].n === 0) await pool.query("INSERT INTO projects(name) VALUES('AQ miniSUITES')");
   await pool.query('UPDATE tasks SET project_id = (SELECT min(id) FROM projects) WHERE project_id IS NULL');
+  for (const nm of String(process.env.PROJECTS_SEED || '').split('|').map(x => x.trim()).filter(Boolean)) {
+    await pool.query('INSERT INTO projects(name) SELECT $1::text WHERE NOT EXISTS (SELECT 1 FROM projects WHERE name = $1::text)', [nm]);
+  }
   await pool.query(`CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
