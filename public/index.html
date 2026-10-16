@@ -127,6 +127,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .cmt .who b { color: var(--fg); font-weight: 700; }
 .cmt .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cmt .del { font: inherit; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; min-height: 28px; }
+.mlist { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.mlist button { font: inherit; text-align: left; color: var(--fg); background: transparent; border: 0; border-top: 1px solid var(--line); padding: 10px 14px; min-height: 44px; cursor: pointer; }
+.mlist button:first-child { border-top: 0; }
+.mlist button:hover { background: var(--bg); }
+.mt { color: var(--blue); font-weight: 700; }
 .cform { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .cform input { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; min-width: 0; }
 .cform button { font: inherit; font-weight: 700; background: var(--blue); color: #fff; border: 0; border-radius: 12px; padding: 0 18px; min-height: 44px; cursor: pointer; }
@@ -464,6 +469,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       renderList();
     }).catch(function () {});
   }
+  function fillMentions(node, text) {
+    var names = users.map(function (u) { return u.name; }).sort(function (a, b) { return b.length - a.length; })
+      .map(function (n) { return n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    if (!names.length) { node.textContent = text; return; }
+    var re = new RegExp('@(' + names.join('|') + ')', 'g'), last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) node.appendChild(document.createTextNode(text.slice(last, m.index)));
+      node.appendChild(el('span', 'mt', m[0])); last = m.index + m[0].length;
+    }
+    if (last < text.length) node.appendChild(document.createTextNode(text.slice(last)));
+  }
   function threadFor(t) {
     var box = el('div', 'thread');
     var list = threads[t.id];
@@ -478,17 +494,41 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
         x.onclick = function () { api('DELETE', '/api/comments/' + c.id).then(function () { return loadAll().then(function () { return loadThread(t.id, false); }); }).catch(function () {}); };
         who.appendChild(x);
       }
-      d.appendChild(who); d.appendChild(el('div', 'tx', c.text)); box.appendChild(d);
+      d.appendChild(who); var tx = el('div', 'tx'); fillMentions(tx, c.text); d.appendChild(tx); box.appendChild(d);
     });
+    var picked = {}, ml = el('div', 'mlist'); ml.hidden = true;
     var f = el('form', 'cform'); var inp = el('input'); inp.type = 'text'; inp.placeholder = 'Комментарий'; inp.maxLength = 2000; inp.setAttribute('aria-label', 'Комментарий'); inp.autocomplete = 'off';
     var btn = el('button', null, 'Отправить'); btn.type = 'submit';
     f.onsubmit = function (e) {
       e.preventDefault();
       var v = inp.value.trim(); if (!v) return;
       btn.disabled = true;
-      api('POST', '/api/tasks/' + t.id + '/comments', { text: v }).then(function () { return loadAll(); }).then(function () { return loadThread(t.id, false); }).catch(function () { btn.disabled = false; });
+      var ments = users.filter(function (u) { return u.id !== ME.id && v.indexOf('@' + u.name) >= 0; }).map(function (u) { return u.id; });
+      api('POST', '/api/tasks/' + t.id + '/comments', { text: v, mentions: ments }).then(function () { return loadAll(); }).then(function () { return loadThread(t.id, false); }).catch(function () { btn.disabled = false; });
     };
-    f.appendChild(inp); f.appendChild(btn); box.appendChild(f);
+    inp.oninput = function () {
+      var before = inp.value.slice(0, inp.selectionStart || inp.value.length);
+      var m = before.match(/(^|\s)@([^\s@]*)$/);
+      ml.textContent = '';
+      if (!m) { ml.hidden = true; return; }
+      var q = m[2].toLowerCase();
+      var list = users.filter(function (u) { return u.id !== (ME && ME.id) && u.name.toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+      if (!list.length) { ml.hidden = true; return; }
+      list.forEach(function (u) {
+        var b = el('button', null, u.name); b.type = 'button';
+        b.onmousedown = function (e) { e.preventDefault(); };
+        b.onclick = function () {
+          var pos = inp.selectionStart || inp.value.length;
+          var head = inp.value.slice(0, pos).replace(/@([^\s@]*)$/, '@' + u.name + ' ');
+          inp.value = head + inp.value.slice(pos);
+          picked[u.id] = true; ml.hidden = true; inp.focus();
+          inp.setSelectionRange(head.length, head.length);
+        };
+        ml.appendChild(b);
+      });
+      ml.hidden = false;
+    };
+    f.appendChild(inp); f.appendChild(btn); box.appendChild(f); box.appendChild(ml);
     return box;
   }
 

@@ -307,9 +307,11 @@ async function api(req, res, url) {
         const b = await readBody(req);
         const tx = cleanLong(b.text);
         if (!tx) return send(res, 400, { error: 'bad' });
-        const t = await pool.query('SELECT id FROM tasks WHERE id = $1', [tid]);
+        const t = await pool.query('SELECT t.id, t.text, p.name AS project FROM tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.id = $1', [tid]);
         if (!t.rows[0]) return send(res, 404, { error: 'not_found' });
+        const ids = (Array.isArray(b.mentions) ? b.mentions : []).map(Number).filter(n => Number.isInteger(n) && n > 0 && n !== me.id).slice(0, 20);
         const r = await pool.query('INSERT INTO comments(task_id, user_id, author, text) VALUES($1,$2,$3,$4) RETURNING id', [tid, me.id, me.name, tx]);
+        if (ids.length) tg.notifyMention(ids, me.name, t.rows[0].text, t.rows[0].project, tx).catch(e => console.error('mention', e.message));
         return send(res, 200, { id: r.rows[0].id });
       }
       return send(res, 405, { error: 'method' });

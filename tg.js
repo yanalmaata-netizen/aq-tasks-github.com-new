@@ -264,4 +264,10 @@ async function test(userId) {
   return send(chat, text, userId);
 }
 
-module.exports = { start, status, link, test, _t: { summaryText, personalText, overdueText, runMorning, runNoon, tick } };
+async function notifyMention(ids, author, taskText, project, comment) {
+  if (!pool || !botName) return;
+  const r = await pool.query('SELECT id, tg_chat_id FROM users WHERE id = ANY($1) AND tg_chat_id IS NOT NULL', [ids]);
+  const text = 'Вас отметили в задаче\n' + author + ': ' + comment + '\n\nЗадача: ' + taskText + (project ? ' · ' + project : '') + '\n' + APP_URL;
+  for (const u of r.rows) await send(u.tg_chat_id, text, u.id);
+}
+module.exports = { start, status, link, test, notifyMention, _t: { summaryText, personalText, overdueText, runMorning, runNoon, tick } };
