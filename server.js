@@ -30,6 +30,23 @@ async function init() {
     photo_v BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INT');
+  await pool.query(`CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    task_id INT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id INT,
+    author TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+  const pc = await pool.query('SELECT count(*)::int AS n FROM projects');
+  if (pc.rows[0].n === 0) await pool.query("INSERT INTO projects(name) VALUES('AQ miniSUITES')");
+  await pool.query('UPDATE tasks SET project_id = (SELECT min(id) FROM projects) WHERE project_id IS NULL');
   await pool.query(`CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -72,6 +89,8 @@ function checkCode(code, stored) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 function genCode() { return String(crypto.randomInt(10000, 100000)); }
+const DEFAULT_CODE = '1111';
+const cleanLong = s => String(s || '').trim().slice(0, 2000);
 
 const attempts = new Map();
 function tooMany(key) {
@@ -143,7 +162,7 @@ async function api(req, res, url) {
       if (!admin) return send(res, 403, { error: 'admin' });
       const b = await readBody(req);
       const name = clean(b.name), phone = normPhone(b.phone);
-      const code = String(b.code || '').trim() || genCode();
+      const code = String(b.code || '').trim() || DEFAULT_CODE;
       const role = b.role === 'admin' ? 'admin' : 'staff';
       if (!name || !phone || code.length < 4) return send(res, 400, { error: 'bad' });
       try {
@@ -160,9 +179,9 @@ async function api(req, res, url) {
       const lines = String(b.lines || '').split('\n').map(s => s.trim()).filter(Boolean).slice(0, 100);
       const out = [];
       for (const line of lines) {
-        const m = line.match(/^(.*?)[,;\t]+\s*([+\d][\d\s()+-]{8,})$/) || line.match(/^(.*?)\s+([+\d][\d\s()+-]{9,})$/);
+        const m = line.match(/^(.*?)[,;\t]+\s*([+\d][\d\s()+-]{8,}?)\s*(?:[,;\t]+\s*(\d{4,}))?$/) || line.match(/^(.*?)\s+([+\d][\d\s()+-]{9,})$/);
         if (!m) { out.push({ line, status: 'не разобрал строку' }); continue; }
-        const name = clean(m[1]), phone = normPhone(m[2]), code = genCode();
+        const name = clean(m[1]), phone = normPhone(m[2]), code = m[3] || DEFAULT_CODE;
         if (!name || !phone) { out.push({ line, status: 'нет имени или телефона' }); continue; }
         try {
           await pool.query('INSERT INTO users(name, phone, code_hash, role) VALUES($1,$2,$3,$4)', [name, phone, hashCode(code), 'staff']);
@@ -227,21 +246,88 @@ async function api(req, res, url) {
       return send(res, 405, { error: 'method' });
     }
 
+    // ---- проекты ----
+    if (url === '/api/projects' && req.method === 'GET') {
+      const r = await pool.query(`SELECT p.id, p.name,
+        count(t.id) FILTER (WHERE NOT t.done)::int AS open,
+        count(t.id) FILTER (WHERE t.done)::int AS done
+        FROM projects p LEFT JOIN tasks t ON t.project_id = p.id GROUP BY p.id ORDER BY p.id`);
+      return send(res, 200, r.rows);
+    }
+    if (url === '/api/projects' && req.method === 'POST') {
+      if (!admin) return send(res, 403, { error: 'admin' });
+      const b = await readBody(req);
+      const nm = clean(b.name).slice(0, 120);
+      if (!nm) return send(res, 400, { error: 'bad' });
+      const r = await pool.query('INSERT INTO projects(name) VALUES($1) RETURNING id', [nm]);
+      return send(res, 200, { id: r.rows[0].id });
+    }
+    let pm = url.match(/^\/api\/projects\/(\d+)$/);
+    if (pm) {
+      if (!admin) return send(res, 403, { error: 'admin' });
+      const pid = Number(pm[1]);
+      if (req.method === 'PATCH') {
+        const b = await readBody(req);
+        const nm = clean(b.name).slice(0, 120);
+        if (!nm) return send(res, 400, { error: 'bad' });
+        await pool.query('UPDATE projects SET name=$1 WHERE id=$2', [nm, pid]);
+        return send(res, 200, { ok: true });
+      }
+      if (req.method === 'DELETE') {
+        const c = await pool.query('SELECT count(*)::int AS n FROM projects');
+        if (c.rows[0].n <= 1) return send(res, 400, { error: 'last' });
+        await pool.query('DELETE FROM tasks WHERE project_id = $1', [pid]);
+        await pool.query('DELETE FROM projects WHERE id = $1', [pid]);
+        return send(res, 200, { ok: true });
+      }
+      return send(res, 405, { error: 'method' });
+    }
+
+    // ---- комментарии ----
+    let cm = url.match(/^\/api\/tasks\/(\d+)\/comments$/);
+    if (cm) {
+      const tid = Number(cm[1]);
+      if (req.method === 'GET') {
+        const r = await pool.query('SELECT id, user_id AS "userId", author, text, created_at AS "at" FROM comments WHERE task_id = $1 ORDER BY id', [tid]);
+        return send(res, 200, r.rows);
+      }
+      if (req.method === 'POST') {
+        const b = await readBody(req);
+        const tx = cleanLong(b.text);
+        if (!tx) return send(res, 400, { error: 'bad' });
+        const t = await pool.query('SELECT id FROM tasks WHERE id = $1', [tid]);
+        if (!t.rows[0]) return send(res, 404, { error: 'not_found' });
+        const r = await pool.query('INSERT INTO comments(task_id, user_id, author, text) VALUES($1,$2,$3,$4) RETURNING id', [tid, me.id, me.name, tx]);
+        return send(res, 200, { id: r.rows[0].id });
+      }
+      return send(res, 405, { error: 'method' });
+    }
+    cm = url.match(/^\/api\/comments\/(\d+)$/);
+    if (cm && req.method === 'DELETE') {
+      const r = await pool.query('SELECT user_id FROM comments WHERE id = $1', [Number(cm[1])]);
+      if (!r.rows[0]) return send(res, 404, { error: 'not_found' });
+      if (!admin && r.rows[0].user_id !== me.id) return send(res, 403, { error: 'forbidden' });
+      await pool.query('DELETE FROM comments WHERE id = $1', [Number(cm[1])]);
+      return send(res, 200, { ok: true });
+    }
+
     // ---- задачи ----
     m = url.match(/^\/api\/tasks(?:\/(\d+))?$/);
     if (!m) return send(res, 404, { error: 'not_found' });
     const id = m[1] ? Number(m[1]) : null;
     if (req.method === 'GET' && !id) {
-      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.user_id AS "userId", COALESCE(u.name, t.resp) AS resp
+      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
+        (SELECT count(*)::int FROM comments c WHERE c.task_id = t.id) AS cc
         FROM tasks t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.date, t.id`);
       return send(res, 200, r.rows);
     }
     const userName = async uid => { const r = await pool.query('SELECT name FROM users WHERE id=$1', [uid]); return r.rows[0] ? r.rows[0].name : null; };
+    const projectOk = async pid => { const r = await pool.query('SELECT id FROM projects WHERE id=$1', [pid]); return !!r.rows[0]; };
     if (req.method === 'POST' && !id) {
       const b = await readBody(req);
-      const uid = Number(b.userId), nm = await userName(uid);
-      if (!okDate(b.date) || !clean(b.text) || !nm) return send(res, 400, { error: 'bad' });
-      const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id) VALUES($1,$2,$3,$4) RETURNING id', [b.date, clean(b.text), nm, uid]);
+      const uid = Number(b.userId), nm = await userName(uid), pid = Number(b.projectId);
+      if (!okDate(b.date) || !clean(b.text) || !nm || !(await projectOk(pid))) return send(res, 400, { error: 'bad' });
+      const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id, project_id) VALUES($1,$2,$3,$4,$5) RETURNING id', [b.date, clean(b.text), nm, uid, pid]);
       return send(res, 200, { id: r.rows[0].id });
     }
     if (req.method === 'PATCH' && id) {
@@ -254,6 +340,7 @@ async function api(req, res, url) {
         vals.push(Number(b.userId)); sets.push('user_id=$' + vals.length);
         vals.push(nm); sets.push('resp=$' + vals.length);
       }
+      if (b.projectId !== undefined) { if (!(await projectOk(Number(b.projectId)))) return send(res, 400, { error: 'bad' }); vals.push(Number(b.projectId)); sets.push('project_id=$' + vals.length); }
       if (b.done !== undefined) { vals.push(!!b.done); sets.push('done=$' + vals.length); }
       if (!sets.length) return send(res, 400, { error: 'bad' });
       vals.push(id);
