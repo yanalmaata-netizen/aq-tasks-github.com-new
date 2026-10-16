@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const push = require('./push');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const API = process.env.TELEGRAM_API || 'https://api.telegram.org';
@@ -134,17 +135,32 @@ async function usersByPhones(list) {
   const r = await pool.query('SELECT id, name, tg_chat_id FROM users WHERE phone = ANY($1) AND tg_chat_id IS NOT NULL', [list]);
   return r.rows;
 }
+function pushDigest(list, now) {
+  const g = split(list, now);
+  const n = g.late.length + g.now.length + g.next.length;
+  if (!n) return null;
+  const parts = [];
+  if (g.late.length) parts.push('Просрочено: ' + g.late.length);
+  if (g.now.length) parts.push('Сегодня: ' + g.now.length);
+  if (g.next.length) parts.push('Завтра: ' + g.next.length);
+  const first = g.late.concat(g.now, g.next).slice(0, 3).map(t => '– ' + t.text).join('\n');
+  return { title: 'Сроки по задачам', body: parts.join(' · ') + '\n' + first + (n > 3 ? '\nи еще ' + (n - 3) : ''), tag: 'morning' };
+}
 async function runMorning(now) {
   const tasks = await openTasks();
   const sumUsers = await usersByPhones(SUMMARY_PHONES);
   const sumIds = new Set(sumUsers.map(u => u.id));
   const st = summaryText(tasks, now);
   if (st) for (const u of sumUsers) await send(u.tg_chat_id, st, u.id);
-  const all = await pool.query('SELECT id, name, tg_chat_id FROM users WHERE tg_chat_id IS NOT NULL');
+  const all = await pool.query('SELECT id, name, tg_chat_id FROM users');
   for (const u of all.rows) {
-    if (sumIds.has(u.id)) continue;
-    const pt = personalText(tasks, u.id, now);
-    if (pt) await send(u.tg_chat_id, pt, u.id);
+    const isSum = sumIds.has(u.id);
+    if (!isSum && u.tg_chat_id) {
+      const pt = personalText(tasks, u.id, now);
+      if (pt) await send(u.tg_chat_id, pt, u.id);
+    }
+    const pd = pushDigest(isSum ? tasks : tasks.filter(t => t.userId === u.id), now);
+    if (pd) await push.notify(u.id, pd).catch(e => console.error('push morning', e.message));
   }
 }
 async function runNoon(now) {

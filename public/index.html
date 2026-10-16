@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="AQ Задачи">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap">
 <style>
 /* Layout: синяя шапка AQ, под ней две страницы: Задачи и Сводка на день. Строка = дата, задача, ответственный. Цвет строки зависит от срока. */
@@ -232,6 +232,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   .calform .go { grid-column: 1 / -1; }
   .cday { min-height: 54px; padding: 4px 2px; }
 }
+.pushbar { display:flex; align-items:center; gap:12px; background:#fff4e0; border:1px solid #ffd9a0; border-radius:14px; padding:12px 14px; margin:0 0 14px; font-size:15px; }
+.pushbar[hidden] { display:none; }
+.pushbar span { flex:1; }
+.pushbar .go { min-height:40px; padding:0 16px; width:auto; }
 </style>
 </head>
 <body>
@@ -256,6 +260,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <button role="tab" id="tab-sum" aria-selected="false">Сводка на день</button>
     <button role="tab" id="tab-team" aria-selected="false">Команда</button>
   </div>
+
+  <div class="pushbar" id="pushbar" hidden><span id="pushbar-t">Включите уведомления, чтобы получать задачи и напоминания о сроках на телефон.</span><button type="button" class="go" id="pushbar-b">Включить</button></div>
 
   <section id="page-tasks">
    <div id="proj-list-box">
@@ -350,6 +356,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     <input type="file" id="p-file" accept="image/*" hidden>
     <div class="note" id="p-tg-note"></div>
     <button type="button" class="go" id="p-tg" hidden>Подключить Telegram</button>
+    <div class="note" id="p-push-note"></div>
+    <button type="button" class="go" id="p-push" hidden>Включить уведомления</button>
+    <button type="button" class="ghost" id="p-push-test" hidden>Тест на телефон</button>
     <button type="button" class="ghost" id="p-tg-test" hidden>Прислать тест в Telegram</button>
     <button type="button" class="go" id="p-upload">Загрузить фото</button>
     <button type="button" class="ghost" id="p-remove">Убрать фото</button>
@@ -442,6 +451,61 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       .catch(function (er) { $('l-err').textContent = er.status === 429 ? 'Слишком много попыток. Подождите 10 минут.' : 'Неверный телефон или код.'; });
   };
 
+  /* ---------- push ---------- */
+  var swReg = null;
+  var pushOk = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+  var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  function b64(s) {
+    var p = '='.repeat((4 - s.length % 4) % 4), r = (s + p).replace(/-/g, '+').replace(/_/g, '/'), raw = atob(r), a = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
+    return a;
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(function (r) { swReg = r; pushSync(); }).catch(function () {});
+  }
+  function pushSubscribe() {
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return api('GET', '/api/push/key').then(function (k) {
+        return reg.pushManager.getSubscription().then(function (ex) {
+          return ex || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(k.key) });
+        });
+      });
+    }).then(function (sub) { return api('POST', '/api/push/subscribe', { subscription: sub.toJSON() }); });
+  }
+  function pushSync() {
+    if (!ME || !pushOk) return pushUi();
+    if (Notification.permission === 'granted') pushSubscribe().catch(function () {}).then(pushUi); else pushUi();
+  }
+  function pushUi() {
+    var bar = $('pushbar'), t = $('pushbar-t'), b = $('pushbar-b');
+    var need = ME && !(pushOk && Notification.permission === 'granted');
+    var denied = pushOk && Notification.permission === 'denied';
+    bar.hidden = !need || denied;
+    if (!bar.hidden) {
+      if (!pushOk) {
+        t.textContent = isIOS ? 'Чтобы получать уведомления, добавьте приложение на экран «Домой» (Поделиться → На экран «Домой») и откройте его с иконки.' : 'Этот браузер не поддерживает уведомления. Откройте приложение в Chrome.';
+        b.hidden = true;
+      } else { t.textContent = 'Включите уведомления, чтобы получать задачи и напоминания о сроках на телефон.'; b.hidden = false; }
+    }
+    var on = pushOk && Notification.permission === 'granted';
+    $('p-push').hidden = !pushOk || on;
+    $('p-push-test').hidden = !on;
+    $('p-push-note').textContent = !pushOk ? (isIOS ? 'На iPhone: добавьте приложение на экран «Домой» и откройте с иконки.' : 'Уведомления в этом браузере недоступны.') : denied ? 'Уведомления запрещены. Разрешите их в настройках телефона для этого приложения.' : on ? 'Уведомления на телефон включены' : 'Уведомления на телефон выключены';
+  }
+  function pushEnable() {
+    Notification.requestPermission().then(function (p) { if (p === 'granted') return pushSubscribe(); }).catch(function () {}).then(pushUi);
+  }
+  $('pushbar-b').onclick = pushEnable;
+  $('p-push').onclick = pushEnable;
+  $('p-push-test').onclick = function () {
+    var b = $('p-push-test'); b.textContent = 'Отправляю';
+    pushSubscribe().then(function () { return api('POST', '/api/push/test'); })
+      .then(function (r) { b.textContent = r.sent ? 'Отправлено. Смотрите телефон' : 'Не доставлено'; })
+      .catch(function () { b.textContent = 'Не удалось'; })
+      .then(function () { setTimeout(function () { b.textContent = 'Тест на телефон'; }, 3000); });
+  };
+
   function boot() {
     if (!TOKEN) return showAuth();
     api('GET', '/api/me').then(function (me) {
@@ -449,6 +513,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
       $('auth').hidden = true; $('app').hidden = false; $('me').hidden = false;
       $('n-date').value = iso(new Date());
       $('admin-box').hidden = ME.role !== 'admin';
+      pushSync();
       return loadAll();
     }).then(function () {
       if (!timer) timer = setInterval(loadAll, 15000);
@@ -803,7 +868,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     api('POST', '/api/tg/test').then(function (r) { b.textContent = r.ok ? 'Отправлено. Проверьте Telegram' : 'Не удалось отправить'; }).catch(function () { b.textContent = 'Не удалось отправить'; }).then(function () { setTimeout(function () { b.textContent = 'Прислать тест в Telegram'; }, 3000); });
   };
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !$('profile').hidden) tgStatus(); });
-  $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; tgStatus(); };
+  $('me').onclick = function () { $('p-err').textContent = ''; renderProfile(); $('profile').hidden = false; tgStatus(); pushUi(); };
   $('p-close').onclick = function () { $('profile').hidden = true; };
   $('profile').onclick = function (e) { if (e.target === $('profile')) $('profile').hidden = true; };
   $('p-logout').onclick = function () { api('POST', '/api/logout').catch(function () {}).then(showAuth); };

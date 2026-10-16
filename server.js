@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
 const tg = require('./tg');
+const push = require('./push');
 
 const PORT = process.env.PORT || 3000;
 const pool = new Pool({
@@ -58,7 +59,7 @@ async function init() {
   )`);
 }
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.png': 'image/png', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 
 function send(res, status, body, type) {
   res.writeHead(status, { 'Content-Type': type || 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -156,6 +157,19 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true });
     }
     if (url === '/api/me' && req.method === 'GET') return send(res, 200, pub(me, true));
+
+    // ---- push на телефон ----
+    if (url === '/api/push/key' && req.method === 'GET') return send(res, 200, { key: push.getKey() });
+    if (url === '/api/push/status' && req.method === 'GET') return send(res, 200, { count: await push.count(me.id) });
+    if (url === '/api/push/subscribe' && req.method === 'POST') {
+      const b = await readBody(req);
+      return (await push.subscribe(me.id, b.subscription)) ? send(res, 200, { ok: true }) : send(res, 400, { error: 'bad' });
+    }
+    if (url === '/api/push/unsubscribe' && req.method === 'POST') { const b = await readBody(req); await push.unsubscribe(me.id, b.endpoint); return send(res, 200, { ok: true }); }
+    if (url === '/api/push/test' && req.method === 'POST') {
+      const n = await push.notify(me.id, { title: 'AQ Задачи', body: 'Тест. Уведомления на телефоне работают.', tag: 'test' });
+      return send(res, 200, { sent: n });
+    }
 
     // ---- telegram ----
     if (url === '/api/tg/status' && req.method === 'GET') return send(res, 200, await tg.status(me.id));
@@ -342,6 +356,10 @@ async function api(req, res, url) {
       const uid = Number(b.userId), nm = await userName(uid), pid = Number(b.projectId);
       if (!okDate(b.date) || !clean(b.text) || !nm || !(await projectOk(pid))) return send(res, 400, { error: 'bad' });
       const r = await pool.query('INSERT INTO tasks(date, text, resp, user_id, project_id) VALUES($1,$2,$3,$4,$5) RETURNING id', [b.date, clean(b.text), nm, uid, pid]);
+      if (uid !== me.id) {
+        const pn = await pool.query('SELECT name FROM projects WHERE id = $1', [pid]);
+        push.notifyAssigned(uid, me.name, clean(b.text), b.date, pn.rows[0] && pn.rows[0].name).catch(e => console.error('push', e.message));
+      }
       return send(res, 200, { id: r.rows[0].id });
     }
     if (req.method === 'PATCH' && id) {
@@ -359,6 +377,10 @@ async function api(req, res, url) {
       if (!sets.length) return send(res, 400, { error: 'bad' });
       vals.push(id);
       await pool.query('UPDATE tasks SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals);
+      if (b.userId !== undefined && Number(b.userId) !== me.id) {
+        const tr = await pool.query('SELECT t.text, t.date, p.name AS project FROM tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.id = $1', [id]);
+        if (tr.rows[0]) push.notifyAssigned(Number(b.userId), me.name, tr.rows[0].text, tr.rows[0].date, tr.rows[0].project).catch(e => console.error('push', e.message));
+      }
       return send(res, 200, { ok: true });
     }
     if (req.method === 'DELETE' && id) {
@@ -386,5 +408,5 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-init().then(() => server.listen(PORT, () => { console.log('AQ tasks on ' + PORT); tg.start(pool).catch(e => console.error('tg start', e.message)); }))
+init().then(() => server.listen(PORT, () => { console.log('AQ tasks on ' + PORT); push.start(pool).catch(e => console.error('push start', e.message)); tg.start(pool).catch(e => console.error('tg start', e.message)); }))
   .catch(e => { console.error('DB init failed', e); process.exit(1); });
