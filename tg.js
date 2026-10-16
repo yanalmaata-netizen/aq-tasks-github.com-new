@@ -210,6 +210,7 @@ async function onMessage(m) {
   }
   const ex = await pool.query('SELECT name FROM users WHERE tg_chat_id = $1 LIMIT 1', [chatId]);
   if (ex.rows[0]) return send(chatId, 'Telegram уже подключен: ' + ex.rows[0].name + '.');
+  if (!payload) return send(chatId, 'Чтобы подключить Telegram, откройте приложение, нажмите на свое имя вверху справа и выберите «Подключить Telegram». Откроется этот бот, нажмите Start.\n' + APP_URL);
   return send(chatId, 'Ссылка устарела. Откройте приложение, нажмите на свое имя вверху и выберите «Подключить Telegram» еще раз.\n' + APP_URL);
 }
 async function poll() {
