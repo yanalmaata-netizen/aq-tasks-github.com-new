@@ -39,6 +39,11 @@ async function init() {
   )`);
   await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id INT');
   await pool.query("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT ''");
+  const hasStatus = await pool.query("SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='status'");
+  if (!hasStatus.rows.length) {
+    await pool.query("ALTER TABLE tasks ADD COLUMN status TEXT NOT NULL DEFAULT 'new'");
+    await pool.query("UPDATE tasks SET status = 'done' WHERE done");
+  }
   await pool.query(`CREATE TABLE IF NOT EXISTS comments (
     id SERIAL PRIMARY KEY,
     task_id INT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -346,7 +351,7 @@ async function api(req, res, url) {
     if (!m) return send(res, 404, { error: 'not_found' });
     const id = m[1] ? Number(m[1]) : null;
     if (req.method === 'GET' && !id) {
-      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.details, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
+      const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.status, t.created_at AS "createdAt", t.details, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
         (SELECT count(*)::int FROM comments c WHERE c.task_id = t.id) AS cc
         FROM tasks t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.date, t.id`);
       return send(res, 200, r.rows);
@@ -376,7 +381,14 @@ async function api(req, res, url) {
       }
       if (b.projectId !== undefined) { if (!(await projectOk(Number(b.projectId)))) return send(res, 400, { error: 'bad' }); vals.push(Number(b.projectId)); sets.push('project_id=$' + vals.length); }
       if (b.details !== undefined) { vals.push(cleanDetails(b.details)); sets.push('details=$' + vals.length); }
-      if (b.done !== undefined) { vals.push(!!b.done); sets.push('done=$' + vals.length); }
+      if (b.status !== undefined) {
+        if (!['new', 'work', 'done'].includes(b.status)) return send(res, 400, { error: 'bad' });
+        vals.push(b.status); sets.push('status=$' + vals.length);
+        vals.push(b.status === 'done'); sets.push('done=$' + vals.length);
+      } else if (b.done !== undefined) {
+        vals.push(!!b.done); sets.push('done=$' + vals.length);
+        if (b.done) sets.push("status='done'"); else sets.push("status = CASE WHEN status = 'done' THEN 'new' ELSE status END");
+      }
       if (!sets.length) return send(res, 400, { error: 'bad' });
       vals.push(id);
       await pool.query('UPDATE tasks SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals);
