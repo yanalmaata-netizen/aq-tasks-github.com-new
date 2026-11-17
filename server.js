@@ -52,6 +52,12 @@ async function init() {
     text TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS task_people (
+    task_id INT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    PRIMARY KEY (task_id, user_id)
+  )`);
   const pc = await pool.query('SELECT count(*)::int AS n FROM projects');
   if (pc.rows[0].n === 0) await pool.query("INSERT INTO projects(name) VALUES('AQ miniSUITES')");
   await pool.query('UPDATE tasks SET project_id = (SELECT min(id) FROM projects) WHERE project_id IS NULL');
@@ -352,7 +358,9 @@ async function api(req, res, url) {
     const id = m[1] ? Number(m[1]) : null;
     if (req.method === 'GET' && !id) {
       const r = await pool.query(`SELECT t.id, t.date, t.text, t.done, t.status, t.created_at AS "createdAt", t.details, t.user_id AS "userId", t.project_id AS "projectId", COALESCE(u.name, t.resp) AS resp,
-        (SELECT count(*)::int FROM comments c WHERE c.task_id = t.id) AS cc
+        (SELECT count(*)::int FROM comments c WHERE c.task_id = t.id) AS cc,
+        COALESCE((SELECT array_agg(tp.user_id ORDER BY tp.user_id) FROM task_people tp WHERE tp.task_id = t.id AND tp.role = 'co'), '{}') AS co,
+        COALESCE((SELECT array_agg(tp.user_id ORDER BY tp.user_id) FROM task_people tp WHERE tp.task_id = t.id AND tp.role = 'watch'), '{}') AS watch
         FROM tasks t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.date, t.id`);
       return send(res, 200, r.rows);
     }
@@ -389,9 +397,29 @@ async function api(req, res, url) {
         vals.push(!!b.done); sets.push('done=$' + vals.length);
         if (b.done) sets.push("status='done'"); else sets.push("status = CASE WHEN status = 'done' THEN 'new' ELSE status END");
       }
-      if (!sets.length) return send(res, 400, { error: 'bad' });
-      vals.push(id);
-      await pool.query('UPDATE tasks SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals);
+      const hasPeople = b.co !== undefined || b.watch !== undefined;
+      if (!sets.length && !hasPeople) return send(res, 400, { error: 'bad' });
+      if (sets.length) {
+        vals.push(id);
+        await pool.query('UPDATE tasks SET ' + sets.join(',') + ' WHERE id=$' + vals.length, vals);
+      }
+      if (b.userId !== undefined) await pool.query('DELETE FROM task_people WHERE task_id = $1 AND user_id = $2', [id, Number(b.userId)]);
+      if (hasPeople) {
+        const cur = await pool.query('SELECT t.user_id AS "userId", t.text, t.date, p.name AS project FROM tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.id = $1', [id]);
+        if (!cur.rows[0]) return send(res, 404, { error: 'not_found' });
+        const known = new Set((await pool.query('SELECT id FROM users')).rows.map(r => r.id));
+        const clamp = a => [...new Set((Array.isArray(a) ? a : []).map(Number).filter(n => Number.isInteger(n) && known.has(n) && n !== cur.rows[0].userId))].slice(0, 30);
+        const old = (await pool.query('SELECT user_id, role FROM task_people WHERE task_id = $1', [id])).rows;
+        const oldCo = old.filter(r => r.role === 'co').map(r => r.user_id), oldWatch = old.filter(r => r.role === 'watch').map(r => r.user_id);
+        let co = b.co !== undefined ? clamp(b.co) : oldCo;
+        let watch = (b.watch !== undefined ? clamp(b.watch) : oldWatch).filter(u => !co.includes(u));
+        await pool.query('DELETE FROM task_people WHERE task_id = $1', [id]);
+        for (const u of co) await pool.query("INSERT INTO task_people(task_id, user_id, role) VALUES($1,$2,'co')", [id, u]);
+        for (const u of watch) await pool.query("INSERT INTO task_people(task_id, user_id, role) VALUES($1,$2,'watch')", [id, u]);
+        const t = cur.rows[0];
+        for (const u of co.filter(x => !oldCo.includes(x) && x !== me.id)) push.notifyRole(u, 'co', me.name, t.text, t.date, t.project, id).catch(e => console.error('push', e.message));
+        for (const u of watch.filter(x => !oldWatch.includes(x) && x !== me.id)) push.notifyRole(u, 'watch', me.name, t.text, t.date, t.project, id).catch(e => console.error('push', e.message));
+      }
       if (b.userId !== undefined && Number(b.userId) !== me.id) {
         const tr = await pool.query('SELECT t.text, t.date, p.name AS project FROM tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.id = $1', [id]);
         if (tr.rows[0]) push.notifyAssigned(Number(b.userId), me.name, tr.rows[0].text, tr.rows[0].date, tr.rows[0].project, id).catch(e => console.error('push', e.message));

@@ -76,4 +76,15 @@ async function notifyAssigned(userId, by, text, date, project, taskId) {
   });
 }
 
-module.exports = { start, getKey, subscribe, unsubscribe, count, notify, notifyAssigned };
+async function notifyRole(userId, role, by, text, date, project, taskId) {
+  const p = String(date).split('-');
+  const d = Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
+  return notify(userId, {
+    title: role === 'co' ? 'Вас добавили соисполнителем' : 'Вас добавили наблюдателем',
+    body: text + '\nСрок: ' + d + (project ? ' · ' + project : '') + ' · от ' + by,
+    tag: 'role',
+    url: taskId ? '/#/task/' + taskId : '/'
+  });
+}
+
+module.exports = { start, getKey, subscribe, unsubscribe, count, notify, notifyAssigned, notifyRole };

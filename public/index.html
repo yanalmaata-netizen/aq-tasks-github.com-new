@@ -307,6 +307,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
 .tcard .thread { border-top:0; background:transparent; padding:0; }
 .tdel { align-self:flex-start; }
 .kcard { cursor:pointer; }
+.tpeople { display:flex; flex-direction:column; gap:8px; }
+.tchips { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.pchip { display:inline-flex; align-items:center; gap:6px; background:var(--blue); color:#fff; border-radius:999px; padding:4px 6px 4px 10px; font-size:14px; font-weight:500; }
+.pchip .pdel { font:inherit; font-size:18px; line-height:1; color:#fff; background:transparent; border:0; cursor:pointer; min-width:32px; min-height:32px; border-radius:50%; }
+.padd { font:inherit; font-size:16px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-height:46px; width:100%; text-transform:none; letter-spacing:0; font-weight:400; }
 </style>
 </head>
 <body>
@@ -1210,6 +1215,36 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
   }
   window.addEventListener('hashchange', route);
   function leaveTask() { if (cameInApp) history.back(); else location.hash = ''; }
+  function peopleBlock(t, role, title) {
+    var box = el('div', 'tpeople');
+    box.appendChild(el('div', 'tlab', title));
+    var ids = (role === 'co' ? t.co : t.watch) || [];
+    var other = (role === 'co' ? t.watch : t.co) || [];
+    var chips = el('div', 'tchips');
+    ids.forEach(function (uid) {
+      var u = null; users.forEach(function (x) { if (x.id === uid) u = x; });
+      if (!u) return;
+      var c = el('span', 'pchip'); if (avatar) c.appendChild(avatar(u, 'sm')); c.appendChild(document.createTextNode(u.name));
+      var x = el('button', 'pdel', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Убрать ' + u.name);
+      x.onclick = function () { var body = {}; body[role] = ids.filter(function (i) { return i !== uid; }); api('PATCH', '/api/tasks/' + t.id, body).then(loadAll).then(function () { renderTask(true); }).catch(function () {}); };
+      c.appendChild(x); chips.appendChild(c);
+    });
+    if (!ids.length) chips.appendChild(el('span', 'note', 'Никого нет'));
+    box.appendChild(chips);
+    var free = users.filter(function (u) { return u.id !== t.userId && ids.indexOf(u.id) < 0; });
+    if (free.length) {
+      var sel = el('select', 'padd'); sel.setAttribute('aria-label', 'Добавить: ' + title);
+      var o0 = el('option', null, '+ Добавить'); o0.value = ''; sel.appendChild(o0);
+      free.forEach(function (u) { var o = el('option', null, u.name + (other.indexOf(u.id) >= 0 ? ' (сейчас ' + (role === 'co' ? 'наблюдатель' : 'соисполнитель') + ')' : '')); o.value = u.id; sel.appendChild(o); });
+      sel.onchange = function () {
+        if (!sel.value) return;
+        var body = {}; body[role] = ids.concat([Number(sel.value)]);
+        api('PATCH', '/api/tasks/' + t.id, body).then(loadAll).then(function () { renderTask(true); }).catch(function () {});
+      };
+      box.appendChild(sel);
+    }
+    return box;
+  }
   function renderTask(force) {
     if ($('page-task').hidden || !openTask) return;
     var body = $('t-body');
@@ -1243,6 +1278,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--orange); ou
     l1.appendChild(dt);
     var l2 = el('label', null, 'Ответственный'); l2.appendChild(respSelect(t));
     meta.appendChild(l1); meta.appendChild(l2); card.appendChild(meta);
+    card.appendChild(peopleBlock(t, 'co', 'Соисполнители'));
+    card.appendChild(peopleBlock(t, 'watch', 'Наблюдатели'));
     var l3 = el('label', 'tlab', 'Подробнее о задаче');
     var det = el('textarea', 'tdet'); det.value = t.details || ''; det.placeholder = 'Что нужно сделать, адрес, контакты'; det.maxLength = 4000;
     var fit = function () { det.style.height = 'auto'; det.style.height = Math.max(90, det.scrollHeight + 2) + 'px'; };
